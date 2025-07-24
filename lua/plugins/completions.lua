@@ -4,10 +4,11 @@ return {
 		dependencies = {
 			"hrsh7th/cmp-nvim-lsp", -- LSP source
 			"hrsh7th/cmp-buffer", -- Buffer source
-			"hrsh7th/cmp-path",   -- Path (filesystem) source
+			"hrsh7th/cmp-path",  -- Path (filesystem) source
 		},
 		config = function()
 			local cmp = require("cmp")
+
 
 			cmp.setup({
 				mapping = cmp.mapping.preset.insert({
@@ -18,10 +19,15 @@ return {
 				}),
 				sources = cmp.config.sources({
 					{ name = "nvim_lsp" }, -- LSP completions
-					{ name = "path" },   -- File path completions
+					{ name = "path" }, -- File path completions
 				}, {
 					{ name = "buffer" }, -- Buffer words (lower priority)
 				}),
+				window = {
+					completion = cmp.config.window.bordered(),
+					documentation = cmp.config.window.bordered(),
+					signature = cmp.config.window.bordered(),
+				},
 			})
 		end,
 	}

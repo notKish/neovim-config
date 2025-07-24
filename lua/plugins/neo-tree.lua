@@ -6,21 +6,24 @@ return { {
 		"MunifTanjim/nui.nvim",
 	},
 	config = function()
+		-- Open Neo-tree with CWD (terminal’s current directory)
 		vim.keymap.set("n", "<leader>e", function()
-			vim.cmd("Neotree reveal toggle")
+			local cwd = vim.fn.getcwd()
+			vim.cmd("Neotree reveal toggle dir=" .. vim.fn.fnameescape(cwd))
 		end, { desc = "Neo-tree (cwd)" })
 
+		-- Open Neo-tree in current file’s directory
 		vim.keymap.set("n", "<leader>E", function()
-			local file_dir = vim.fn.expand("%:p:h") -- full path to file's directory
+			local file_dir = vim.fn.expand("%:p:h")
 			vim.cmd("Neotree reveal toggle dir=" .. vim.fn.fnameescape(file_dir))
 		end, { desc = "Neo-tree (file dir)" })
 
+		-- Open Neo-tree for Neovim config lua folder
+		vim.keymap.set("n", "<leader>lc", function()
+			vim.cmd("Neotree reveal dir=~/.config/nvim/lua")
+		end, { desc = "Neo-tree: open nvim lua config" })
 		require("neo-tree").setup({
-			window = {
-				mappings = {
-					["l"] = "open",
-				},
-			},
+			hide_dotfiles = false,
 		})
 	end
 },

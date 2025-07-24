@@ -20,4 +20,3 @@ require("vim-options")
 
 -- neovim plugins
 require("lazy").setup("plugins")
-
