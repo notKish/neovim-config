@@ -9,7 +9,6 @@ return {
 		config = function()
 			local cmp = require("cmp")
 
-
 			cmp.setup({
 				mapping = cmp.mapping.preset.insert({
 					["<C-Space>"] = cmp.mapping.complete(),
@@ -26,7 +25,6 @@ return {
 				window = {
 					completion = cmp.config.window.bordered(),
 					documentation = cmp.config.window.bordered(),
-					signature = cmp.config.window.bordered(),
 				},
 			})
 		end,

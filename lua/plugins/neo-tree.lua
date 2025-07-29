@@ -22,6 +22,7 @@ return { {
 		vim.keymap.set("n", "<leader>lc", function()
 			vim.cmd("Neotree reveal dir=~/.config/nvim/lua")
 		end, { desc = "Neo-tree: open nvim lua config" })
+
 		require("neo-tree").setup({
 			hide_dotfiles = false,
 		})
