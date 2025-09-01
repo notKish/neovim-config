@@ -13,6 +13,13 @@ return {
 
 			dapui.setup({}) -- Use default UI layout
 
+			-- Define DAP signs and highlights
+			vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "DapBreakpoint", linehl = "", numhl = "" })
+			vim.fn.sign_define("DapStopped", { text = "→", texthl = "DapStopped", linehl = "DapStoppedLine", numhl = "" })
+			vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "#993939" })
+			vim.api.nvim_set_hl(0, "DapStopped", { fg = "#779977" })
+			vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#2d2d2d" })
+
 			-- DAP UI listeners to open/close UI automatically
 			dap.listeners.after.event_initialized["dapui_config"] = function()
 				dapui.open()
@@ -145,7 +152,9 @@ return {
 			}
 
 			-- Keybindings for debugging
-			vim.keymap.set("n", "<F5>", function() dap.continue() end, { desc = "DAP: Continue" })
+			vim.keymap.set("n", "<F5>", function()
+				dap.continue()
+			end, { desc = "DAP: Continue / Run" })
 			vim.keymap.set("n", "<F10>", function() dap.step_over() end, { desc = "DAP: Step Over" })
 			vim.keymap.set("n", "<F11>", function() dap.step_into() end, { desc = "DAP: Step Into" })
 			vim.keymap.set("n", "<F12>", function() dap.step_out() end, { desc = "DAP: Step Out" })

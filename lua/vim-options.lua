@@ -30,10 +30,10 @@ vim.keymap.set("n", "<leader>wk", "<cmd>vertical resize -5<CR>", { desc = "Decre
 
 -- buffers
 vim.keymap.set("n", "<leader>bd", function()
-  local cur_win = vim.api.nvim_get_current_win()
-  vim.cmd("bprevious")
-  vim.cmd("bdelete #")
-  vim.api.nvim_set_current_win(cur_win)
+	local cur_win = vim.api.nvim_get_current_win()
+	vim.cmd("bprevious")
+	vim.cmd("bdelete #")
+	vim.api.nvim_set_current_win(cur_win)
 end, { desc = "Delete current buffer, keep window" })
 
 vim.keymap.set("n", "<leader>ba", ":%bd | e#<CR>", { desc = "Close all other buffers" })
@@ -42,26 +42,32 @@ vim.keymap.set("n", "<leader>bn", ":bnext<CR>", { desc = "Next buffer" })
 vim.keymap.set("n", "<leader>bp", ":bprevious<CR>", { desc = "Previous buffer" })
 
 vim.diagnostic.config({
-  virtual_text = {
-    prefix = "●",       -- or "", ">>", "", etc.
-    spacing = 2,
-    severity = nil,     -- show all
-  },
-  signs = true,         -- shows signs in the gutter
-  underline = true,
-  update_in_insert = false,
-  float = {
-    border = "rounded",
-    source = "always",
-  },
+	virtual_text = {
+		prefix = "●", -- or "", ">>", "", etc.
+		spacing = 2,
+		severity = nil, -- show all
+	},
+	signs = true, -- shows signs in the gutter
+	underline = true,
+	update_in_insert = false,
+	float = {
+		border = "rounded",
+		source = "always",
+	},
 })
 
 
 vim.api.nvim_create_autocmd('TextYankPost', {
-  group = vim.api.nvim_create_augroup('highlight_yank', {}),
-  desc = 'Highlight selection on yank',
-  pattern = '*',
-  callback = function()
-    vim.highlight.on_yank { higroup = 'IncSearch', timeout = 500 }
-  end,
+	group = vim.api.nvim_create_augroup('highlight_yank', {}),
+	desc = 'Highlight selection on yank',
+	pattern = '*',
+	callback = function()
+		vim.highlight.on_yank { higroup = 'IncSearch', timeout = 500 }
+	end,
 })
+
+
+vim.keymap.set('n', '<leader>ob', function()
+  vim.fn.jobstart({ 'open', vim.fn.expand('%:p') }, { detach = true })
+end, { noremap = true, silent = true })
+

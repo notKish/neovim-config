@@ -1,25 +1,25 @@
 return {
 	{
 		"mason-org/mason.nvim",
-		opts = {}
+		opts = {},
 	},
 	{
 		"mason-org/mason-lspconfig.nvim",
 		opts = {
-			ensure_installed = { "pyright", "ts_ls", "cucumber_language_server" },
-			automatic_enable = true
-		},
-		dependencies = {
-			{ "mason-org/mason.nvim", opts = {} },
-			"neovim/nvim-lspconfig",
+			ensure_installed = {
+				-- python
+				"pyright",
+				-- typescript
+				"ts_ls",
+				"cucumber_language_server",
+				"jsonls",
+			},
 		},
 	},
 	{
 		"neovim/nvim-lspconfig",
 		config = function()
 			local lspconfig = require("lspconfig")
-
-			-- LSP keybindings
 			local on_attach = function(client, bufnr)
 				local bufmap = function(mode, lhs, rhs, desc)
 					vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
@@ -37,34 +37,47 @@ return {
 				end, "[LSP] Format File")
 				bufmap("n", "[d", vim.diagnostic.goto_prev, "[LSP] Previous Diagnostic")
 				bufmap("n", "]d", vim.diagnostic.goto_next, "[LSP] Next Diagnostic")
-
-				-- Signature help (now handled by nvim-cmp)
-				-- vim.keymap.set("i", "<C-s>", vim.lsp.buf.signature_help, { buffer = bufnr, desc = "[LSP] Signature Help" })
-
 			end
-			-- cmp capabilities
-			local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
-			-- Setup each server
-			lspconfig.pyright.setup({
-				on_attach = on_attach,
-				capabilities = capabilities,
-				settings = {
-					python = {
-						pythonPath = "/Users/techverito/Apps/python/data-llm-probe/.venv/bin/python", -- ✅ your actual interpreter
-						analysis = {
-							autoSearchPaths = true,
-							diagnosticMode = "openFilesOnly",
-							useLibraryCodeForTypes = true,
-							autoImportCompletions = true
+			local capabilities = require("cmp_nvim_lsp").default_capabilities()
+			capabilities.workspace = capabilities.workspace or {}
+			capabilities.workspace.didChangeWorkspaceFolders = {
+				dynamicRegistration = true,
+			}
+
+			local servers = {
+				pyright = {
+					settings = {
+						python = {
+							pythonPath = "/Users/techverito/Apps/python/data-llm-probe/.venv/bin/python",
+							analysis = {
+								autoSearchPaths = true,
+								diagnosticMode = "openFilesOnly",
+								useLibraryCodeForTypes = true,
+								autoImportCompletions = true,
+							},
 						},
-					}
-				}
-			})
-			lspconfig.lua_ls.setup({ on_attach = on_attach, capabilities = capabilities })
-			lspconfig.vimls.setup({ on_attach = on_attach, capabilities = capabilities })
-			lspconfig.ts_ls.setup({ on_attach = on_attach, capabilities = capabilities })
-			lspconfig.cucumber_language_server.setup({ on_attach = on_attach, capabilities = capabilities })
-		end
+					},
+				},
+				lua_ls = {},
+				vimls = {},
+				ts_ls = {},
+				jsonls = {},
+				cucumber_language_server = {},
+			}
+
+			for server, config in pairs(servers) do
+				config.on_attach = on_attach
+				config.capabilities = capabilities
+				lspconfig[server].setup(config)
+			end
+		end,
 	},
+	{
+		"mfussenegger/nvim-jdtls",
+		ft = { "java" }, -- load only for Java files
+		build = function ()
+			vim.cmd("Lazy update nvim-jdtls")
+		end
 	}
+}
