@@ -62,14 +62,17 @@ return {
 					name = "Debug current TS file",
 					program = "${file}",
 					cwd = "${workspaceFolder}",
-					runtimeExecutable = "node",
-					runtimeArgs = { "--loader", "ts-node/esm" },
+					runtimeExecutable = "tsx",
+					runtimeArgs = { "--loader", "ts-node/esm", "--experimental-specifier-resolution=node" },
 					sourceMaps = true,
 					protocol = "inspector",
 					skipFiles = { "<node_internals>/**", "**/node_modules/**" },
 					resolveSourceMapLocations = {
 						"${workspaceFolder}/**",
 						"!**/node_modules/**",
+					},
+					env = {
+						TS_NODE_ESMODULES = "true",
 					},
 				},
 				{

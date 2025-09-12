@@ -20,7 +20,11 @@ return {
 		"neovim/nvim-lspconfig",
 		config = function()
 			local lspconfig = require("lspconfig")
+
 			local on_attach = function(client, bufnr)
+				-- Debug: print when LSP attaches
+				print("LSP attached:", client.name, "to buffer", bufnr)
+
 				local bufmap = function(mode, lhs, rhs, desc)
 					vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
 				end
@@ -59,24 +63,91 @@ return {
 						},
 					},
 				},
-				lua_ls = {},
+				lua_ls = {
+					settings = {
+						Lua = {
+							runtime = {
+								version = "LuaJIT",
+							},
+							diagnostics = {
+								globals = { "vim" },
+							},
+							workspace = {
+								library = vim.api.nvim_get_runtime_file("", true),
+								checkThirdParty = false,
+							},
+							telemetry = {
+								enable = false,
+							},
+						},
+					},
+				},
 				vimls = {},
-				ts_ls = {},
-				jsonls = {},
+				jsonls = {
+					settings = {
+						json = {
+							validate = { enable = true },
+							format = {
+								enable = true,
+							},
+						},
+				},
 				cucumber_language_server = {},
 			}
+			}
 
+			-- Setup ts_ls with error handling to fix the Neo-tree error
+			local function setup_ts_ls()
+				local util = require("lspconfig.util")
+
+				lspconfig.ts_ls.setup({
+					on_attach = on_attach,
+					capabilities = capabilities,
+					-- Fix the root_dir issue that was causing the error
+					root_dir = function(fname)
+						return util.root_pattern("package.json", "tsconfig.json", "jsconfig.json")(fname)
+								or util.root_pattern(".git")(fname)
+					end,
+					settings = {
+						typescript = {
+							preferences = {
+								disableSuggestions = true,
+							},
+						},
+						javascript = {
+							preferences = {
+								disableSuggestions = true,
+							},
+						},
+					},
+				})
+			end
+
+			-- Setup other servers
 			for server, config in pairs(servers) do
 				config.on_attach = on_attach
 				config.capabilities = capabilities
 				lspconfig[server].setup(config)
+			end
+
+			-- Setup ts_ls with error handling
+			local ok, err = pcall(setup_ts_ls)
+			if not ok then
+				vim.notify("Failed to setup ts_ls: " .. tostring(err), vim.log.levels.WARN)
+				-- Fallback: setup with minimal config
+				pcall(function()
+					lspconfig.ts_ls.setup({
+						on_attach = on_attach,
+						capabilities = capabilities,
+					})
+				end)
 			end
 		end,
 	},
 	{
 		"mfussenegger/nvim-jdtls",
 		ft = { "java" }, -- load only for Java files
-		build = function ()
+		build = function()
 			vim.cmd("Lazy update nvim-jdtls")
 		end
 	}
