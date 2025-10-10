@@ -11,6 +11,15 @@ vim.keymap.set("x", "K", ":move '<-2<CR>gv=gv", { desc = "Move selected lines up
 
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>", { desc = "Clear search highlight on Esc" })
 
+-- indentation
+vim.opt.smartindent = true                         -- Smart auto-indenting
+vim.opt.autoindent = true                          -- Copy indent from current line
+vim.keymap.set("v", "<", "<gv", { desc = "Indent left and reselect" })
+vim.keymap.set("v", ">", ">gv", { desc = "Indent right and reselect" })
+
+-- file handling
+vim.opt.autowrite = true													-- auto save
+
 -- windows
 vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Move to left split" })
 vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right split" })
@@ -52,7 +61,7 @@ vim.diagnostic.config({
 	update_in_insert = false,
 	float = {
 		border = "rounded",
-		source = "always",
+		source = 'if_many',
 	},
 })
 
