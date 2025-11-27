@@ -19,7 +19,6 @@ return {
 	{
 		"neovim/nvim-lspconfig",
 		config = function()
-			local lspconfig = require("lspconfig")
 
 			local on_attach = function(client, bufnr)
 				-- Debug: print when LSP attaches
@@ -100,7 +99,7 @@ return {
 			local function setup_ts_ls()
 				local util = require("lspconfig.util")
 
-				lspconfig.ts_ls.setup({
+				vim.lsp.config.ts_ls.setup({
 					on_attach = on_attach,
 					capabilities = capabilities,
 					-- Fix the root_dir issue that was causing the error
@@ -127,7 +126,7 @@ return {
 			for server, config in pairs(servers) do
 				config.on_attach = on_attach
 				config.capabilities = capabilities
-				lspconfig[server].setup(config)
+				require("lspconfig")[server].setup(config)
 			end
 
 			-- Setup ts_ls with error handling
@@ -136,7 +135,7 @@ return {
 				vim.notify("Failed to setup ts_ls: " .. tostring(err), vim.log.levels.WARN)
 				-- Fallback: setup with minimal config
 				pcall(function()
-					lspconfig.ts_ls.setup({
+					vim.lsp.config.ts_ls.setup({
 						on_attach = on_attach,
 						capabilities = capabilities,
 					})

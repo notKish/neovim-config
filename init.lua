@@ -16,7 +16,13 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 -- editor options
-require("vim-options")
+require("core.options")
+require("core.keymaps")
 
 -- neovim plugins
-require("lazy").setup("plugins")
+require("lazy").setup({
+  { import = "plugins.ui" },
+  { import = "plugins.lsp" },
+  { import = "plugins.completion" },
+  { import = "plugins.tools" },
+})
