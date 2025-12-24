@@ -1,28 +1,19 @@
--- lazyVim
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
-  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
-  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
-  if vim.v.shell_error ~= 0 then
-    vim.api.nvim_echo({
-      { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
-      { out, "WarningMsg" },
-      { "\nPress any key to exit..." },
-    }, true, {})
-    vim.fn.getchar()
-    os.exit(1)
-  end
-end
-vim.opt.rtp:prepend(lazypath)
+-- Set leader keys early (must be before lazy.nvim)
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
 
--- editor options
-require("core.options")
-require("core.keymaps")
+-- Disable providers you don't use (faster startup)
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_ruby_provider = 0
 
--- neovim plugins
-require("lazy").setup({
-  { import = "plugins.ui" },
-  { import = "plugins.lsp" },
-  { import = "plugins.completion" },
-  { import = "plugins.tools" },
-})
+-- Disable Mason auto-install (Nix provides tooling)
+vim.g.mason_disable = true
+
+-- Load core config
+require("config.options")
+require("config.keymaps")
+require("config.autocmds")
+
+-- Bootstrap lazy.nvim and load plugins
+require("config.lazy")
+
