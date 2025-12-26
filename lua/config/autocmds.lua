@@ -6,3 +6,17 @@
 --
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
+
+-- Add filetype detection for .flake files (Nix flakes)
+-- This must run early, before LSP attaches
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+  pattern = { "*.flake" },
+  callback = function()
+    vim.bo.filetype = "nix"
+    -- Force LSP to attach after filetype is set
+    vim.schedule(function()
+      vim.cmd("doautocmd FileType nix")
+    end)
+  end,
+  desc = "Set .flake files as nix filetype",
+})
