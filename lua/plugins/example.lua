@@ -54,6 +54,7 @@ return {
 				-- Java LSP
 				jdtls = {},
 				-- Other LSPs will be auto-detected from PATH
+				vtsls = {},
 			},
 		},
 	},
@@ -61,13 +62,13 @@ return {
 	-- ============================================================================
 	-- TypeScript
 	-- ============================================================================
-	{
-		"jose-elias-alvarez/typescript.nvim",
-		keys = {
-			{ "<leader>co", "<cmd>TypescriptOrganizeImports<cr>", desc = "Organize Imports" },
-			{ "<leader>cR", "<cmd>TypescriptRenameFile<cr>", desc = "Rename File" },
-		},
-	},
+	-- {
+	-- 	"jose-elias-alvarez/typescript.nvim",
+	-- 	keys = {
+	-- 		{ "<leader>co", "<cmd>TypescriptOrganizeImports<cr>", desc = "Organize Imports" },
+	-- 		{ "<leader>cR", "<cmd>TypescriptRenameFile<cr>", desc = "Rename File" },
+	-- 	},
+	-- },
 
 	-- ============================================================================
 	-- Treesitter
