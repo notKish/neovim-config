@@ -20,3 +20,4 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
   end,
   desc = "Set .flake files as nix filetype",
 })
+

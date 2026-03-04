@@ -1,0 +1,4 @@
+# Java project: JDK 21, Maven, jdtls, JAVA_HOME, LOMBOK_JAR
+# Copy to project root as .envrc and run: direnv allow
+#   cp path/to/docs/java.envrc.sample .envrc
+use flake ~/.config/nix#java

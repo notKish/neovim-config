@@ -69,6 +69,79 @@ return {
 },
 ```
 
+**Project-level `pyrightconfig.json` (optional):**
+To match this config’s Pyright behavior from a file (e.g. for CLI `pyright` or other editors), put this in your project root:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/vscode-pyright/schemas/pyrightconfig.schema.json",
+  "include": ["."],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "**/venv",
+    "**/.venv",
+    "**/env",
+    "**/.env",
+    "**/build",
+    "**/dist",
+    "**/.git"
+  ],
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": false
+}
+```
+or
+```json
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Darwin"
+}
+
+```
+
+Pyright (and the Neovim LSP) will use this when the file is in the project root. The LSP in this config also sets `diagnosticMode: "openFilesOnly"` and `autoSearchPaths: false` via Lua; those are applied in-editor only.
+
+### Go (`lang.go`)
+
+**What it includes:** gopls (LSP), treesitter (go, gomod, gowork, gosum), conform (gofumpt), nvim-lint (golangci-lint), nvim-dap-go. Tools (go, gopls, gofumpt, delve, golangci-lint) are provided by Nix.
+
+**Why `go-service/internal/service` (or any internal package) might not import:**
+
+1. **Import path must match the module path**
+   Imports use the **module path from `go.mod`**, not the repo folder name.
+   - If `go.mod` has `module github.com/you/go-service`, use:
+     ```go
+     import "github.com/you/go-service/internal/service"
+     ```
+   - Not `go-service/internal/service` unless your module line is literally `module go-service`.
+
+2. **Open from the module root**
+   gopls must run with the directory that contains `go.mod` as the workspace root.
+   - Open the project as the root: `nvim /path/to/go-service` (where `go.mod` lives), not a subfolder.
+   - If you use a parent repo with several Go modules, use a **go.work** file or open each module root in its own Neovim session.
+
+3. **Go’s `internal` rule**
+   Code in `internal/` may only be imported by code in the **same module** whose directory is at or above that `internal` directory.
+   - So `internal/service` can be imported from `cmd/` or `pkg/` in the same module.
+   - It cannot be imported from another module (e.g. a different `go.mod` or a different repo).
+
+4. **After changing `go.mod` or layout**
+   Run from the project root:
+   ```bash
+   go mod tidy
+   ```
+   Then restart gopls (`:LspRestart`) or Neovim so it rescans.
+
+**Quick check:** From the directory that contains `go.mod`, run:
+```bash
+go list ./...
+```
+If that lists your packages, use the **exact** import paths it shows (e.g. `github.com/you/go-service/internal/service`) in your imports.
+
 ### TypeScript (`lang.typescript`)
 
 **What it includes:**
@@ -119,7 +192,7 @@ You can override any plugin's options that are configured by an extra:
 ```lua
 return {
   { import = "lazyvim.plugins.extras.lang.python" },
-  
+
   -- Override venv-selector settings
   {
     "linux-cultist/venv-selector.nvim",
@@ -137,7 +210,7 @@ Extras provide base configurations, but you can add more:
 ```lua
 return {
   { import = "lazyvim.plugins.extras.lang.python" },
-  
+
   -- Add ruff formatter (not included in Python extra)
   {
     "stevearc/conform.nvim",
@@ -157,7 +230,7 @@ If an extra includes a plugin you don't want:
 ```lua
 return {
   { import = "lazyvim.plugins.extras.lang.python" },
-  
+
   -- Disable a plugin that comes with the extra
   { "some-plugin-from-extra", enabled = false },
 }
@@ -170,7 +243,7 @@ Configure extras based on conditions:
 ```lua
 return {
   { import = "lazyvim.plugins.extras.lang.python" },
-  
+
   {
     "neovim/nvim-lspconfig",
     opts = function(_, opts)
