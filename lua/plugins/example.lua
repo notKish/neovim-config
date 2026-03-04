@@ -237,20 +237,22 @@ return {
 						-- Limit workspace scanning
 						maxTsServerMemory = 4096, -- Limit memory usage (MB)
 					},
-					javascript = {
-						-- Same optimizations for JavaScript
-						preferences = {
-							includePackageJsonAutoImports = "off",
-							disableSuggestions = false,
-						},
-						inlayHints = {
-							parameterNames = { enabled = "none" },
-							variableTypes = { enabled = false },
-							propertyDeclarationTypes = { enabled = false },
-							functionLikeReturnTypes = { enabled = false },
-						},
-						maxTsServerMemory = 4096,
+				javascript = {
+					preferences = {
+						includePackageJsonAutoImports = "off",
+						disableSuggestions = false,
 					},
+					inlayHints = {
+						parameterNames = { enabled = "none" },
+						variableTypes = { enabled = false },
+						propertyDeclarationTypes = { enabled = false },
+						functionLikeReturnTypes = { enabled = false },
+					},
+				},
+				-- maxTsServerMemory is a root-level vtsls setting (not per-language)
+				vtsls = {
+					maxTsServerMemory = 4096,
+				},
 				},
 			})
 
@@ -259,20 +261,8 @@ return {
 	},
 
 	-- ============================================================================
-	-- TypeScript
+	-- Formatters (conform.nvim)
 	-- ============================================================================
-	-- {
-	-- 	"jose-elias-alvarez/typescript.nvim",
-	-- 	keys = {
-	-- 		{ "<leader>co", "<cmd>TypescriptOrganizeImports<cr>", desc = "Organize Imports" },
-	-- 		{ "<leader>cR", "<cmd>TypescriptRenameFile<cr>", desc = "Rename File" },
-	-- 	},
-	-- },
-
-	-- ============================================================================
-	-- Python: Ruff Formatter & Linter (not provided by Python extras)
-	-- ============================================================================
-	-- Python extras provide pyright LSP and venv-selector, but not ruff formatter/linter
 	{
 		"stevearc/conform.nvim",
 		opts = function(_, opts)
@@ -292,20 +282,15 @@ return {
 			}
 			opts.formatters_by_ft.c = { "clang_format" }
 			opts.formatters_by_ft.cpp = { "clang_format" }
-			return opts
-		end,
-	},
-	{
-		"mfussenegger/nvim-lint",
-		opts = function(_, opts)
-			opts.linters = opts.linters or {}
-			opts.linters.ruff = {
-				cmd = "ruff",
-				args = { "check", "--output-format", "text", "--stdin-filename", "$FILENAME", "-" },
-				stdin = true,
-			}
-			opts.linters_by_ft = opts.linters_by_ft or {}
-			opts.linters_by_ft.python = { "ruff" }
+			-- prettierd (faster prettier daemon) for web filetypes
+			opts.formatters_by_ft.javascript = { "prettierd" }
+			opts.formatters_by_ft.javascriptreact = { "prettierd" }
+			opts.formatters_by_ft.typescript = { "prettierd" }
+			opts.formatters_by_ft.typescriptreact = { "prettierd" }
+			opts.formatters_by_ft.json = { "prettierd" }
+			opts.formatters_by_ft.html = { "prettierd" }
+			opts.formatters_by_ft.css = { "prettierd" }
+			opts.formatters_by_ft.markdown = { "prettierd" }
 			return opts
 		end,
 	},
