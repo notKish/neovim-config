@@ -34,7 +34,7 @@ return {
 	},
 
 	-- ============================================================================
-	-- CodeCompanion — AI chat + inline assistant (DeepSeek via OpenAI-compatible API)
+	-- CodeCompanion — AI chat + inline assistant (MiniMax via Anthropic-compatible API)
 	-- ============================================================================
 	{
 		"olimorris/codecompanion.nvim",
@@ -42,29 +42,41 @@ return {
 			"nvim-lua/plenary.nvim",
 			"nvim-treesitter/nvim-treesitter",
 		},
-		opts = {
-			adapters = {
-				deepseek = function()
-					return require("codecompanion.adapters").extend("openai_compatible", {
-						name = "deepseek",
-						env = {
-							url = "https://api.deepseek.com",
-							api_key = "DEEPSEEK_API_KEY",
-						},
-						schema = {
-							model = {
-								default = "deepseek-chat",
-							},
-						},
-					})
-				end,
-			},
-			strategies = {
-				chat = { adapter = "deepseek" },
-				inline = { adapter = "deepseek" },
-				agent = { adapter = "deepseek" },
-			},
-		},
+		config = function(_, opts)
+			opts.strategies = {
+				chat = { adapter = "minimax" },
+				inline = { adapter = "minimax" },
+				agent = { adapter = "minimax" },
+			}
+			opts.interactions = opts.interactions or {}
+			opts.interactions.chat = opts.interactions.chat or {}
+			opts.interactions.chat.tools = opts.interactions.chat.tools or {}
+			opts.interactions.chat.tools.opts = opts.interactions.chat.tools.opts or {}
+			-- Auto-load these tools in every chat session
+			opts.interactions.chat.tools.opts.default_tools = {
+				"editor", -- file create/read/edit/delete/search group
+				"run_command", -- terminal command execution
+				"grep_search", -- ripgrep codebase search
+				"get_diagnostics", -- LSP diagnostics
+				"fetch_webpage", -- fetch URL content (no API key needed)
+				"get_changed_files", -- git diff
+			}
+			require("codecompanion").setup(opts)
+
+			-- Register the minimax adapter in config.adapters.http AFTER setup so
+			-- resolve("minimax") can find it via config.adapters.http["minimax"].
+			-- A function value triggers the `type == "function"` branch in resolve().
+			local cc_config = require("codecompanion.config")
+			cc_config.adapters.http.minimax = function()
+				local anthropic_base = require("codecompanion.adapters.http.anthropic")
+				return require("codecompanion.adapters.http").extend(anthropic_base, {
+					name = "minimax",
+					url = "https://api.minimax.io/anthropic/v1/messages",
+					env = { api_key = "MINIMAX_API_KEY" },
+					schema = { model = { default = "MiniMax-M2.5" } },
+				})
+			end
+		end,
 		keys = {
 			{ "<leader>ac", "<cmd>CodeCompanionChat Toggle<cr>", desc = "CodeCompanion Chat" },
 			{ "<leader>aa", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions", mode = { "n", "v" } },
@@ -73,48 +85,43 @@ return {
 	},
 
 	-- ============================================================================
-	-- Minuet AI — ghost text + completion (DeepSeek, configurable providers)
+	-- Minuet AI — ghost text + completion (MiniMax via Anthropic-compatible API)
 	-- ============================================================================
 	{
 		"milanglacier/minuet-ai.nvim",
+		enabled = false,
 		dependencies = { "nvim-lua/plenary.nvim" },
 		opts = {
-			-- provider options: openai_fim_compatible, openai
-			provider = "openai_fim_compatible",
-			request_timeout = 4,
+			provider = "openai_compatible",
+			request_timeout = 15,
 			throttle = 1200,
 			debounce = 500,
 			n_completions = 3,
-			context_window = 8000,
+			context_window = 16000,
 			provider_options = {
-				openai_fim_compatible = {
-					api_key = "DEEPSEEK_API_KEY",
-					name = "deepseek",
-					end_point = "https://api.deepseek.com/beta/completions",
-					model = "deepseek-chat",
-					optional = {
-						max_tokens = 256,
-						top_p = 0.9,
-						stop = { "\n\n" },
-					},
-				},
-				openai = {
-					api_key = "OPENAI_API_KEY",
-					model = "gpt-4o-mini",
-					end_point = "https://api.openai.com/v1/chat/completions",
+				-- MiniMax via OpenAI-compatible endpoint.
+				-- stream=false required: MiniMax streams reasoning chunks with empty content=""
+				-- first, which minuet discards, resulting in no completions. Non-streaming
+				-- returns content directly in choices[0].message.content.
+				openai_compatible = {
+					api_key = function()
+						return vim.env.MINIMAX_API_KEY
+					end,
+					end_point = "https://api.minimax.io/v1/text/chatcompletion_v2",
+					model = "MiniMax-M2.5",
+					name = "MiniMax",
+					stream = false,
 					optional = {
 						max_tokens = 256,
 						top_p = 0.9,
 					},
 				},
 			},
-			-- Virtual text (ghost text): separate keymaps so Tab stays for completion-list cycle
 			virtualtext = {
 				auto_trigger_ft = { "python", "lua", "typescript", "javascript", "nix", "rust", "go", "c", "cpp" },
 				keymap = {
-					-- C-y and M-CR often conflict with blink / don't work in Ghostty; use these instead
-					accept = "<C-CR>", -- accept whole ghost (Ctrl+Enter)
-					accept_line = "<S-CR>", -- accept one line of ghost (Shift+Enter)
+					accept = "<C-CR>",
+					accept_line = "<S-CR>",
 					next = "<C-j>",
 					prev = "<C-k>",
 					dismiss = "<C-e>",
@@ -134,17 +141,17 @@ return {
 			-- C-Space: use default (show full completion list); don't override to Minuet-only
 			opts.sources = opts.sources or {}
 			opts.sources.default = opts.sources.default or { "lsp", "path", "snippets", "buffer" }
-			if not vim.tbl_contains(opts.sources.default, "minuet") then
-				table.insert(opts.sources.default, "minuet") -- at end so Minuet appears after LSP/path/snippets/buffer
-			end
+			-- if not vim.tbl_contains(opts.sources.default, "minuet") then
+			-- 	table.insert(opts.sources.default, "minuet") -- at end so Minuet appears after LSP/path/snippets/buffer
+			-- end
 			opts.sources.providers = opts.sources.providers or {}
-			opts.sources.providers.minuet = {
-				name = "minuet",
-				module = "minuet.blink",
-				async = true,
-				timeout_ms = 4000,
-				score_offset = -50, -- lower score so Minuet suggestions tend to appear at end of list
-			}
+			-- opts.sources.providers.minuet = {
+			-- 	name = "minuet",
+			-- 	module = "minuet.blink",
+			-- 	async = true,
+			-- 	timeout_ms = 4000,
+			-- 	score_offset = -50, -- lower score so Minuet suggestions tend to appear at end of list
+			-- }
 			opts.completion = vim.tbl_deep_extend("force", opts.completion or {}, {
 				trigger = { prefetch_on_insert = false },
 			})
@@ -237,22 +244,22 @@ return {
 						-- Limit workspace scanning
 						maxTsServerMemory = 4096, -- Limit memory usage (MB)
 					},
-				javascript = {
-					preferences = {
-						includePackageJsonAutoImports = "off",
-						disableSuggestions = false,
+					javascript = {
+						preferences = {
+							includePackageJsonAutoImports = "off",
+							disableSuggestions = false,
+						},
+						inlayHints = {
+							parameterNames = { enabled = "none" },
+							variableTypes = { enabled = false },
+							propertyDeclarationTypes = { enabled = false },
+							functionLikeReturnTypes = { enabled = false },
+						},
 					},
-					inlayHints = {
-						parameterNames = { enabled = "none" },
-						variableTypes = { enabled = false },
-						propertyDeclarationTypes = { enabled = false },
-						functionLikeReturnTypes = { enabled = false },
+					-- maxTsServerMemory is a root-level vtsls setting (not per-language)
+					vtsls = {
+						maxTsServerMemory = 4096,
 					},
-				},
-				-- maxTsServerMemory is a root-level vtsls setting (not per-language)
-				vtsls = {
-					maxTsServerMemory = 4096,
-				},
 				},
 			})
 
