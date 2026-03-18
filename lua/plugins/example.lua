@@ -14,6 +14,7 @@ return {
 	{ import = "lazyvim.plugins.extras.ui.treesitter-context" }, -- Sticky function headers when scrolling
 	{ import = "lazyvim.plugins.extras.util.project" }, -- Recent projects picker (<leader>fp)
 
+
 	-- ============================================================================
 	-- Workspaces — named multi-root workspaces, switch between projects anywhere on disk
 	-- ============================================================================
@@ -89,7 +90,6 @@ return {
 	-- ============================================================================
 	{
 		"milanglacier/minuet-ai.nvim",
-		enabled = false,
 		dependencies = { "nvim-lua/plenary.nvim" },
 		opts = {
 			provider = "openai_compatible",
@@ -129,41 +129,54 @@ return {
 			},
 		},
 	},
-	-- Wire Minuet into blink.cmp (LazyVim default) so you can cycle in the completion menu too
+	-- blink.cmp: Tab cycles when menu is visible, inserts spaces otherwise.
+	-- Minuet source is ready to uncomment when minuet is re-enabled.
 	{
 		"Saghen/blink.cmp",
 		optional = true,
 		opts = function(_, opts)
 			opts.keymap = opts.keymap or {}
-			-- Tab: open completion menu and cycle (insert_next triggers completion if menu not visible)
-			opts.keymap["<Tab>"] = { "insert_next", "snippet_forward", "fallback" }
-			opts.keymap["<S-Tab>"] = { "insert_prev", "snippet_backward", "fallback" }
-			-- C-Space: use default (show full completion list); don't override to Minuet-only
-			opts.sources = opts.sources or {}
-			opts.sources.default = opts.sources.default or { "lsp", "path", "snippets", "buffer" }
+			-- Tab: cycle completion menu if visible, otherwise insert spaces/indent
+			opts.keymap["<Tab>"] = {
+				function(cmp)
+					if cmp.is_visible() then
+						return cmp.select_next()
+					end
+				end,
+				"snippet_forward",
+				"fallback",
+			}
+			opts.keymap["<S-Tab>"] = {
+				function(cmp)
+					if cmp.is_visible() then
+						return cmp.select_prev()
+					end
+				end,
+				"snippet_backward",
+				"fallback",
+			}
+			-- Minuet source (uncomment when minuet is re-enabled)
+			-- opts.sources = opts.sources or {}
+			-- opts.sources.default = opts.sources.default or { "lsp", "path", "snippets", "buffer" }
 			-- if not vim.tbl_contains(opts.sources.default, "minuet") then
-			-- 	table.insert(opts.sources.default, "minuet") -- at end so Minuet appears after LSP/path/snippets/buffer
+			-- 	table.insert(opts.sources.default, "minuet")
 			-- end
-			opts.sources.providers = opts.sources.providers or {}
+			-- opts.sources.providers = opts.sources.providers or {}
 			-- opts.sources.providers.minuet = {
 			-- 	name = "minuet",
 			-- 	module = "minuet.blink",
 			-- 	async = true,
 			-- 	timeout_ms = 4000,
-			-- 	score_offset = -50, -- lower score so Minuet suggestions tend to appear at end of list
+			-- 	score_offset = -50,
 			-- }
 			opts.completion = vim.tbl_deep_extend("force", opts.completion or {}, {
-				trigger = { prefetch_on_insert = false },
+				trigger = {
+					prefetch_on_insert = false,
+					show_on_trigger_character = false,
+				},
 			})
 		end,
 	},
-
-	-- ============================================================================
-	-- Mason disabled — language tools are provided on PATH (e.g. by Nix / system).
-	-- ============================================================================
-	{ "mason-org/mason.nvim", enabled = false },
-	{ "mason-org/mason-lspconfig.nvim", enabled = false },
-	{ "mason-org/mason-nvim-dap.nvim", enabled = false },
 
 	-- ============================================================================
 	-- LSP server overrides
@@ -174,10 +187,7 @@ return {
 			-- Ensure servers table exists
 			opts.servers = opts.servers or {}
 
-			-- Merge/override specific server configurations
-			opts.servers.nil_ls = opts.servers.nil_ls or {}
-
-			-- Java LSP (Nix: jdt-language-server). Lombok via LOMBOK_JAR so @Data/@AllArgsConstructor are understood.
+			-- Java LSP. Lombok via LOMBOK_JAR so @Data/@AllArgsConstructor are understood.
 			opts.servers.jdtls = opts.servers.jdtls or {}
 			do
 				local lombok_jar = vim.env.LOMBOK_JAR
@@ -450,7 +460,6 @@ return {
 				"typescript",
 				"vim",
 				"yaml",
-				"nix", -- for .flake files
 				"java",
 			})
 		end,
