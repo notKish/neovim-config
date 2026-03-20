@@ -7,46 +7,46 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 -- line numbers
-opt.number = true
+opt.number         = true
 opt.relativenumber = true
 
 -- indentation
-opt.tabstop = 2
-opt.shiftwidth = 2
-opt.expandtab = true
-opt.smartindent = true
+opt.tabstop        = 2
+opt.shiftwidth     = 2
+opt.expandtab      = true
+opt.smartindent    = true
 
 -- search
-opt.ignorecase = true
-opt.smartcase = true
-opt.hlsearch = false
-opt.incsearch = true
+opt.ignorecase     = true
+opt.smartcase      = true
+opt.hlsearch       = false
+opt.incsearch      = true
 
 -- appearance
-opt.termguicolors = true
-opt.signcolumn = "yes"
-opt.cursorline = true
-opt.scrolloff = 8
-opt.sidescrolloff = 8
-opt.wrap = false
-opt.colorcolumn = "120"
+opt.termguicolors  = true
+opt.signcolumn     = "yes"
+opt.cursorline     = true
+opt.scrolloff      = 8
+opt.sidescrolloff  = 8
+opt.wrap           = false
+opt.colorcolumn    = "120"
 
 -- splits
-opt.splitright  = true
-opt.splitbelow  = true
-opt.equalalways = true   -- auto-equalize windows when one is closed
+opt.splitright     = true
+opt.splitbelow     = true
+opt.equalalways    = true -- auto-equalize windows when one is closed
 
 -- misc
-opt.swapfile = false
-opt.backup = false
-opt.undofile = true
-opt.undodir = vim.fn.stdpath("data") .. "/undo"
-opt.updatetime = 250
-opt.timeoutlen = 300
-opt.completeopt = { "menuone", "noselect", "noinsert", "popup" }
-opt.clipboard = "unnamedplus"
-opt.mouse = "a"
-opt.showmode = false
+opt.swapfile       = false
+opt.backup         = false
+opt.undofile       = true
+opt.undodir        = vim.fn.stdpath("data") .. "/undo"
+opt.updatetime     = 250
+opt.timeoutlen     = 300
+opt.completeopt    = { "menuone", "noselect", "noinsert", "popup" }
+opt.clipboard      = "unnamedplus"
+opt.mouse          = "a"
+opt.showmode       = false
 
 -- better built-in fuzzy find / wildmenu (no plugin needed)
 opt.path:append("**")
@@ -59,7 +59,6 @@ vim.g.netrw_banner          = 0
 vim.g.netrw_liststyle       = 1
 -- When selecting a file in netrw, open it in the same window.
 -- Use manual splits (e.g., :vsplit) if you want netrw to stay open.
-vim.g.netrw_browse_split    = 1
 vim.g.netrw_localcopycmd    = "cp"
 vim.g.netrw_localcopydircmd = "cp -r"
 vim.g.netrw_localmovecmd    = "mv"
