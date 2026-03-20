@@ -1,0 +1,96 @@
+NETRW GUIDE                                                    *netrw-guide*
+
+Open with :help netrw-guide or <leader>? from any buffer.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPENING NETRW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  <leader>e   Open netrw in current window (project root / cwd)
+  -           Open netrw in directory of CURRENT FILE (jump straight to it)
+  :e .        Open netrw in cwd from any buffer
+  :Ex         Open netrw in current window
+  :Sex        Open netrw in horizontal split
+  :Vex        Open netrw in vertical split
+  :Tex        Open netrw in new tab
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NAVIGATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  <Enter>     Open file or enter directory
+  -           Go up one directory
+  u           Go back in directory history
+  U           Go forward in directory history
+  gh          Toggle hidden files (dotfiles like .env, .git)
+  i           Cycle listing style: thin → long → wide → tree
+  s           Cycle sort order: name → time → size
+  gn          Set directory under cursor as new tree root
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPENING FILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  <Enter>     Open in current window
+  o           Open in horizontal split
+  v           Open in vertical split
+  t           Open in new tab
+  p           Preview in split (cursor stays in netrw)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  %           Create new file (prompts for name)
+  d           Create new directory
+  R           Rename file or directory under cursor
+  D           Delete file or directory under cursor (asks confirmation)
+  <leader>rn  Rename/move current open file from any buffer
+              Tab-completes path while typing destination
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COPY / MOVE MULTIPLE FILES                            *netrw-guide-bulk*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  mf          Mark file under cursor (run on each file you want)
+  mF          Unmark file under cursor
+  mu          Unmark ALL marked files
+  mt          Set current directory as the copy/move TARGET
+              (Tab-completes the directory path in the prompt)
+  mc          Copy marked files → target directory
+  mm          Move marked files → target directory
+  md          Diff marked files (up to 3)
+  mx          Run a shell command on all marked files
+              e.g. press mx then type: chmod +x
+
+  Step-by-step — copy files from dir A to dir B:
+
+  1. :Vex              open source dir in a vertical split
+  2. mf                mark each file you want (repeat per file)
+  3. <C-w>l            move to right split (or open target with :e path/)
+  4. mt                set this directory as the target
+                       (Tab completes the path if you type manually)
+  5. <C-w>h            go back to source split
+  6. mc                copy  — or mm to move
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BOOKMARKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  mb          Bookmark current directory
+  qb          List all bookmarks
+  {n}gb       Jump to bookmark number n  (e.g. 1gb, 2gb)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TIPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Use - to jump straight into the folder of whatever file you're editing
+  • Press i to switch to tree view (like a sidebar file tree)
+  • Press gh to show/hide dotfiles (.env, .gitignore, etc.)
+  • Use p to preview without leaving netrw
+  • Tab completes directory paths in mt and R prompts
+  • Use mx to batch-run any shell command on marked files
+  • <leader>rn renames/moves the current open file with Tab path completion
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
