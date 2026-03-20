@@ -57,9 +57,9 @@ opt.wildignore:append({ "*.o", "*.pyc", "node_modules/**", ".git/**" })
 -- netrw settings
 vim.g.netrw_banner          = 0
 vim.g.netrw_liststyle       = 1
--- When selecting a file in netrw, open it in a vertical split (to the right)
--- so netrw can stay on the left.
-vim.g.netrw_browse_split    = 2
+-- When selecting a file in netrw, open it in the same window.
+-- Use manual splits (e.g., :vsplit) if you want netrw to stay open.
+vim.g.netrw_browse_split    = 1
 vim.g.netrw_localcopycmd    = "cp"
 vim.g.netrw_localcopydircmd = "cp -r"
 vim.g.netrw_localmovecmd    = "mv"

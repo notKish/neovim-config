@@ -106,3 +106,6 @@ end, { desc = "Rename current file" })
 map("n", "[d", function() vim.diagnostic.goto_prev() end, { desc = "Prev diagnostic" })
 map("n", "]d", function() vim.diagnostic.goto_next() end, { desc = "Next diagnostic" })
 map("n", "<leader>cd", function() vim.diagnostic.open_float() end, { desc = "Line diagnostics" })
+
+-- git
+map("n", "<leader>gg", "<cmd>!lazygit<cr>", { desc = "Lazygit" })
