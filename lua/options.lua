@@ -32,8 +32,9 @@ opt.wrap = false
 opt.colorcolumn = "120"
 
 -- splits
-opt.splitright = true
-opt.splitbelow = true
+opt.splitright  = true
+opt.splitbelow  = true
+opt.equalalways = true   -- auto-equalize windows when one is closed
 
 -- misc
 opt.swapfile = false
@@ -54,8 +55,52 @@ opt.wildmode = "longest:full,full"
 opt.wildignore:append({ "*.o", "*.pyc", "node_modules/**", ".git/**" })
 
 -- netrw settings
-vim.g.netrw_banner    = 0        -- hide the banner
-vim.g.netrw_liststyle = 1        -- long listing by default
-vim.g.netrw_browse_split = 0     -- open files in same window
-vim.g.netrw_localcopycmd  = "cp -r"   -- recursive copy
-vim.g.netrw_localmovecmd  = "mv"
+vim.g.netrw_banner          = 0
+vim.g.netrw_liststyle       = 1
+-- When selecting a file in netrw, open it in a vertical split (to the right)
+-- so netrw can stay on the left.
+vim.g.netrw_browse_split    = 2
+vim.g.netrw_localcopycmd    = "cp"
+vim.g.netrw_localcopydircmd = "cp -r"
+vim.g.netrw_localmovecmd    = "mv"
+
+-- make marked files clearly visible + restore window nav keys netrw overrides
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "netrw",
+  callback = function()
+    vim.api.nvim_set_hl(0, "netrwMarkFile", { fg = "#f38ba8", bold = true, underline = true })
+    local buf = vim.api.nvim_get_current_buf()
+    -- netrw steals <C-l> for refresh — remap refresh to <leader>r and restore navigation
+    vim.keymap.set("n", "<C-h>", function() vim.cmd("wincmd h") end, { buffer = buf, nowait = true })
+    vim.keymap.set("n", "<C-j>", function() vim.cmd("wincmd j") end, { buffer = buf, nowait = true })
+    vim.keymap.set("n", "<C-k>", function() vim.cmd("wincmd k") end, { buffer = buf, nowait = true })
+    vim.keymap.set("n", "<C-l>", function() vim.cmd("wincmd l") end, { buffer = buf, nowait = true })
+    vim.keymap.set("n", "<leader>r", "<Plug>NetrwRefresh", { buffer = buf })
+
+    -- show current target and marked files (works from any netrw window)
+    vim.keymap.set("n", "<leader>ms", function()
+      local t = vim.g.netrw_localmovecmd_target or "(not set — use mt to set)"
+      -- marked files are stored per-buffer in netrw_markfilelist
+      local marked = {}
+      for _, b in ipairs(vim.api.nvim_list_bufs()) do
+        local ok, mfl = pcall(vim.api.nvim_buf_get_var, b, "netrw_markfilelist")
+        if ok and type(mfl) == "table" then
+          for _, f in ipairs(mfl) do
+            table.insert(marked, f)
+          end
+        end
+      end
+      local lines = { "  Target : " .. tostring(t), "", "  Marked files:" }
+      if #marked == 0 then
+        table.insert(lines, "    (none — use mf to mark)")
+      else
+        for _, f in ipairs(marked) do
+          table.insert(lines, "    " .. f)
+        end
+      end
+      table.insert(lines, "")
+      table.insert(lines, "  mc = copy  |  mm = move  |  mu = unmark all")
+      vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO)
+    end, { buffer = buf, desc = "Show netrw target and marked files" })
+  end,
+})

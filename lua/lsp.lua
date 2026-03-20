@@ -24,6 +24,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
     bmap("n", "<leader>cf", function() vim.lsp.buf.format({ async = true }) end, "Format buffer")
     bmap("i", "<C-s>", vim.lsp.buf.signature_help, "Signature help")
 
+    -- format on save
+    if client and client:supports_method("textDocument/formatting") then
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        buffer = buf,
+        callback = function()
+          vim.lsp.buf.format({ bufnr = buf, id = client.id, async = false })
+        end,
+      })
+    end
+
     -- native completion (0.11+)
     if client and client:supports_method("textDocument/completion") then
       vim.lsp.completion.enable(true, client.id, buf, { autotrigger = true })

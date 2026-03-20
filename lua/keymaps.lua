@@ -33,10 +33,12 @@ map("n", "<C-k>", "<C-w>k", { desc = "Go to upper window" })
 map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
 
 -- window resize
-map("n", "<leader>w=", "<C-w>=", { desc = "Equalize window sizes" })
+map("n", "<leader>w=", "<C-w>=",        { desc = "Equalize all windows" })
+map("n", "<leader>wm", "<C-w>| <C-w>_", { desc = "Maximize current window" })
+map("n", "<leader>wh", "<cmd>vertical resize 50%<cr>", { desc = "Half width" })
 -- hold <C-w> then keep pressing +/-/</>  to resize repeatedly
-map("n", "<C-w>+", "<cmd>resize +2<cr>", { desc = "Increase window height" })
-map("n", "<C-w>-", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
+map("n", "<C-w>+", "<cmd>resize +2<cr>",          { desc = "Increase window height" })
+map("n", "<C-w>-", "<cmd>resize -2<cr>",          { desc = "Decrease window height" })
 map("n", "<C-w><", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
 map("n", "<C-w>>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
 
