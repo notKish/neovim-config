@@ -73,6 +73,14 @@ hl("@symbol.outer", { fg = "#89dceb", bold = true })
 
 hl("TSNone", { fg = "#cdd6f4" })
 
+hl("StatuslineGit", { fg = "#a6e3a1", bg = "#45475a" })
+hl("StatuslineGitDirty", { fg = "#f38ba8", bg = "#45475a" })
+hl("StatuslineMode", { fg = "#cdd6f4", bg = "#584469", bold = true })
+hl("StatuslineReadonly", { fg = "#f9e2af", bg = "#45475a" })
+hl("StatuslineInfo", { fg = "#89b4fa", bg = "#45475a" })
+hl("StatuslineSubtle", { fg = "#bac2de", bg = "#45475a", bold = true })
+hl("StatuslineSearch", { fg = "#cba6f7", bg = "#45475a" })
+
 M.hl = hl
 
 return M
