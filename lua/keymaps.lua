@@ -1,25 +1,3 @@
-vim.g.mapleader = " "
--- vim.g.maplocalleader = " "
-
--- completion navigation (not in netrw)
-vim.keymap.set("i", "<Tab>", function()
-  if vim.bo.filetype == "netrw" then return "<Tab>" end
-  if vim.fn.pumvisible() == 1 then return "<Down>" end
-  return "<Tab>"
-end, { expr = true })
-vim.keymap.set("i", "<S-Tab>", function()
-  if vim.bo.filetype == "netrw" then return "<S-Tab>" end
-  if vim.fn.pumvisible() == 1 then return "<Up>" end
-  return "<S-Tab>"
-end, { expr = true })
--- <CR> confirms selection, <C-y> also works
-vim.keymap.set("i", "<CR>", function()
-  return vim.fn.pumvisible() == 1 and "<C-y>" or "<CR>"
-end, { expr = true })
-vim.keymap.set("i", "<C-Space>", function()
-  vim.lsp.completion.get()
-end, { desc = "Trigger LSP completion" })
-
 local map = vim.keymap.set
 
 -- better up/down on wrapped lines
@@ -33,12 +11,12 @@ map("n", "<C-k>", "<C-w>k", { desc = "Go to upper window" })
 map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
 
 -- window resize
-map("n", "<leader>w=", "<C-w>=",        { desc = "Equalize all windows" })
+map("n", "<leader>w=", "<C-w>=", { desc = "Equalize all windows" })
 map("n", "<leader>wm", "<C-w>| <C-w>_", { desc = "Maximize current window" })
 map("n", "<leader>wh", "<cmd>vertical resize 50%<cr>", { desc = "Half width" })
 -- hold <C-w> then keep pressing +/-/</>  to resize repeatedly
-map("n", "<C-w>+", "<cmd>resize +2<cr>",          { desc = "Increase window height" })
-map("n", "<C-w>-", "<cmd>resize -2<cr>",          { desc = "Decrease window height" })
+map("n", "<C-w>+", "<cmd>resize +2<cr>", { desc = "Increase window height" })
+map("n", "<C-w>-", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
 map("n", "<C-w><", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
 map("n", "<C-w>>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
 
