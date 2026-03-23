@@ -37,13 +37,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
     -- native completion (0.11+)
     if client and client:supports_method("textDocument/completion") then
       vim.lsp.completion.enable(true, client.id, buf, { autotrigger = true })
-      -- trigger completion on every text change in insert mode
-      -- vim.api.nvim_create_autocmd("TextChangedI", {
-      --   buffer = buf,
-      --   callback = function()
-      --     vim.lsp.completion.get()
-      --   end,
-      -- })
     end
   end,
 })

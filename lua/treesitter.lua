@@ -7,7 +7,7 @@ local REGISTRY = {
   typescript = false,
   bash = false,
   markdown = true,
-  json = false,
+  json = true,
   toml = false,
   c = true,
   vim = true,
@@ -266,3 +266,4 @@ end, { desc = "Show symbol under cursor" })
 M.install_parsers()
 
 return M
+
