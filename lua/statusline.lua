@@ -66,7 +66,7 @@ end
 function M.statusline()
   local git = get_git_branch()
   local mode = get_mode()
-  local fname = vim.fn.expand("%f")
+  local dir = vim.fn.fnamemodify(vim.fn.expand("%:p:h"), ":~:.")
   local readonly = get_readonly()
   local ft = get_filetype()
   local lnum = vim.fn.line(".")
@@ -81,8 +81,8 @@ function M.statusline()
   end
 
   local left = string.format(
-    "%%#%s#%s%%#StatuslineMode# %s %%f%%#StatuslineReadonly#%s %%#StatuslineInfo#%s | Ln %d, Col %d | %d%%%% ",
-    git_hl, git, mode, readonly, ft, lnum, col, pct
+    "%%#%s#%s%%#StatuslineMode# %s %%#StatuslineSubtle# %s%%#StatuslineReadonly#%s %%#StatuslineInfo#%s | Ln %d, Col %d | %d%%%% ",
+    git_hl, git, mode, dir, readonly, ft, lnum, col, pct
   )
 
   local right = string.format(
@@ -103,19 +103,43 @@ vim.api.nvim_create_autocmd("TermOpen", {
 
 function M.bufferline()
   local buffers = {}
+  local items = {}
+  local counts = {}
+
+  -- First pass: collect buffer display names and count duplicates by basename.
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
-      local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t")
-      if name == "" then name = "[No Name]" end
-      local current = buf == vim.api.nvim_get_current_buf()
-      local modified = vim.bo[buf].modified and " ●" or ""
-      if current then
-        table.insert(buffers, "%#TabLineSel# " .. name .. modified .. " %#TabLineFill#")
-      else
-        table.insert(buffers, "%#TabLine# " .. name .. modified .. " ")
-      end
+      local full = vim.api.nvim_buf_get_name(buf)
+      local base = vim.fn.fnamemodify(full, ":t")
+      if base == "" then base = "[No Name]" end
+
+      counts[base] = (counts[base] or 0) + 1
+      table.insert(items, { buf = buf, full = full, base = base })
     end
   end
+
+  -- Second pass: render tabs. If basename duplicates, show parent dir tail too.
+  for _, item in ipairs(items) do
+    local buf = item.buf
+    local current = buf == vim.api.nvim_get_current_buf()
+    local modified_hl = vim.bo[buf].modified and "%#TabLineMod# ●%#TabLineSel#" or "%#TabLineSel#"
+    local modified_hl_normal = vim.bo[buf].modified and "%#TabLineMod# ●%#TabLine#" or ""
+
+    local label = item.base
+    if counts[item.base] and counts[item.base] > 1 and item.full ~= "" then
+      local dir = vim.fn.fnamemodify(item.full, ":p:h:t")
+      if dir ~= "" then
+        label = dir .. "/" .. item.base
+      end
+    end
+
+    if current then
+      table.insert(buffers, "%#TabLineSel# " .. label .. modified_hl .. " %#TabLineFill#")
+    else
+      table.insert(buffers, "%#TabLine# " .. label .. modified_hl_normal .. " ")
+    end
+  end
+
   return table.concat(buffers) .. "%#TabLineFill#"
 end
 

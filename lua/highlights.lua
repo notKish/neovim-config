@@ -81,6 +81,12 @@ hl("StatuslineInfo", { fg = "#89b4fa", bg = "#45475a" })
 hl("StatuslineSubtle", { fg = "#bac2de", bg = "#45475a", bold = true })
 hl("StatuslineSearch", { fg = "#cba6f7", bg = "#45475a" })
 
+-- Bufferline / tabline colors (used by statusline.bufferline())
+hl("TabLine", { fg = "#cdd6f4", bg = "#1e1e2e" })
+hl("TabLineSel", { fg = "#89b4fa", bg = "#313244", bold = true })
+hl("TabLineFill", { fg = "#585b70", bg = "#1e1e2e" })
+hl("TabLineMod", { fg = "#f38ba8", bg = "#1e1e2e", bold = true })
+
 M.hl = hl
 
 return M
