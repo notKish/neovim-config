@@ -28,7 +28,7 @@ return {
       file_ignore_patterns = { "node_modules", ".git/", "dist/", "build/" },
       mappings = {
         i = {
-          ["<CR>"] = "select_buffer",
+          ["<CR>"] = "select_default",
           ["<C-j>"] = "move_selection_next",
           ["<C-k>"] = "move_selection_previous",
           ["<C-f>"] = "preview_scrolling_down",
@@ -37,7 +37,7 @@ return {
           ["<C-c>"] = "close",
         },
         n = {
-          ["<CR>"] = "select_buffer",
+          ["<CR>"] = "select_default",
           ["<C-j>"] = "move_selection_next",
           ["<C-k>"] = "move_selection_previous",
           ["<C-f>"] = "preview_scrolling_down",
@@ -59,10 +59,10 @@ return {
     },
   },
   keys = {
-    { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find files" },
-    { "<leader>fg", "<cmd>Telescope live_grep<cr>", desc = "Live grep" },
-    { "<leader>fw", "<cmd>Telescope grep_string<cr>", desc = "Grep word under cursor" },
-    { "<leader>fb", "<cmd>Telescope buffers<cr>", desc = "List buffers" },
-    { "<leader>fh", "<cmd>Telescope help_tags<cr>", desc = "Help tags" },
+    { "<leader><space>", "<cmd>Telescope find_files<cr>",  desc = "Find files" },
+    { "<leader>?",       "<cmd>Telescope live_grep<cr>",   desc = "Live grep" },
+    { "<leader>fw",      "<cmd>Telescope grep_string<cr>", desc = "Grep word under cursor" },
+    { "<leader>fb",      "<cmd>Telescope buffers<cr>",     desc = "List buffers" },
+    { "<leader>fh",      "<cmd>Telescope help_tags<cr>",   desc = "Help tags" },
   },
 }

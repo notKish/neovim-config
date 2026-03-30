@@ -12,13 +12,11 @@ map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
 
 -- window resize
 map("n", "<leader>w=", "<C-w>=", { desc = "Equalize all windows" })
-map("n", "<leader>wm", "<C-w>| <C-w>_", { desc = "Maximize current window" })
-map("n", "<leader>wh", "<cmd>vertical resize 50%<cr>", { desc = "Half width" })
--- hold <C-w> then keep pressing +/-/</>  to resize repeatedly
-map("n", "<C-w>+", "<cmd>resize +2<cr>", { desc = "Increase window height" })
-map("n", "<C-w>-", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
-map("n", "<C-w><", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
-map("n", "<C-w>>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
+-- window resize
+map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
+map("n", "<C-Down>", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
+map("n", "<C-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
+map("n", "<C-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
 
 -- buffers
 map("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
@@ -70,7 +68,10 @@ map("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit" })
 -- netrw file explorer
 map("n", "<leader>e", "<cmd>Ex<cr>", { desc = "File explorer" })
 map("n", "-", "<cmd>Ex %:h<cr>", { desc = "Open netrw in current file's dir" })
-map("n", "<leader>?", "<cmd>helptags ALL | help netrw-guide<cr>", { desc = "Netrw guide" })
+-- map("n", "<leader>?", "<cmd>helptags ALL | help netrw-guide<cr>", { desc = "Netrw guide" })
+map("n", "<leader>cg", "<cmd>Ex " .. vim.fn.stdpath("config") .. "<cr>", { desc = "Open nvim config dir" })
+
+-- rename
 map("n", "<leader>rn", function()
   local old = vim.api.nvim_buf_get_name(0)
   local new = vim.fn.input("Rename to: ", old, "file")
@@ -81,9 +82,30 @@ map("n", "<leader>rn", function()
 end, { desc = "Rename current file" })
 
 -- diagnostics
-map("n", "[d", function() vim.diagnostic.goto_prev() end, { desc = "Prev diagnostic" })
-map("n", "]d", function() vim.diagnostic.goto_next() end, { desc = "Next diagnostic" })
+map("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, { desc = "Prev diagnostic" })
+map("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, { desc = "Next diagnostic" })
 map("n", "<leader>cd", function() vim.diagnostic.open_float() end, { desc = "Line diagnostics" })
 
 -- git
-map("n", "<leader>gg", "<cmd>!lazygit<cr>", { desc = "Lazygit" })
+map("n", "<leader>gg", function()
+  local buf = vim.api.nvim_create_buf(false, true)
+  local width = math.floor(vim.o.columns * 0.9)
+  local height = math.floor(vim.o.lines * 0.9)
+  vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = math.floor((vim.o.lines - height) / 2),
+    col = math.floor((vim.o.columns - width) / 2),
+    style = "minimal",
+    border = "rounded",
+  })
+  vim.api.nvim_set_current_buf(buf)
+  vim.fn.jobstart("lazygit", {
+    term = true,
+    on_exit = function()
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end,
+  })
+  vim.cmd("startinsert")
+end, { desc = "Lazygit" })

@@ -43,7 +43,7 @@ opt.undofile       = true
 opt.undodir        = vim.fn.stdpath("data") .. "/undo"
 opt.updatetime     = 250
 opt.timeoutlen     = 300
-opt.completeopt    = { "menuone", "noselect", "noinsert", "popup" }
+
 opt.clipboard      = "unnamedplus"
 opt.mouse          = "a"
 opt.showmode       = false
@@ -62,6 +62,8 @@ vim.g.netrw_liststyle       = 1
 vim.g.netrw_localcopycmd    = "cp"
 vim.g.netrw_localcopydircmd = "cp -r"
 vim.g.netrw_localmovecmd    = "mv"
+vim.g.netrw_sort_sequence   = "[\\/]$,*"
+vim.g.netrw_sort_direction  = 'normal'
 
 -- make marked files clearly visible + restore window nav keys netrw overrides
 vim.api.nvim_create_autocmd("FileType", {

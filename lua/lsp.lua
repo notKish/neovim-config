@@ -33,11 +33,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end,
       })
     end
-
-    -- native completion (0.11+)
-    if client and client:supports_method("textDocument/completion") then
-      vim.lsp.completion.enable(true, client.id, buf, { autotrigger = true })
-    end
   end,
 })
 
@@ -106,4 +101,19 @@ vim.lsp.config("clangd", {
   filetypes = { "c", "cpp", "objc", "objcpp" },
 })
 
-vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "clangd" })
+vim.lsp.config("jdtls", {
+  cmd = { "jdtls" },
+  filetypes = { "java" },
+  settings = {
+    java = {
+      eclipse = { downloadSources = true },
+      maven = { downloadSources = true },
+      implementationsCodeLens = { enabled = true },
+      referencesCodeLens = { enabled = true },
+      format = { enabled = true },
+    },
+  },
+  root_markers = { "pom.xml", "build.gradle", ".git" },
+})
+
+vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "clangd", "jdtls" })

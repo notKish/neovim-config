@@ -7,7 +7,6 @@
 -- <C-e>      — dismiss
 
 local M = {}
-
 local api_key = vim.env.MINIMAX_API_KEY
 local model = "MiniMax-M2.7"
 local endpoint = "https://api.minimax.io/anthropic/v1/messages"
@@ -69,8 +68,8 @@ local function build_prompt(prefix, suffix)
   local instruction = ""
   for _, line in ipairs(vim.split(prefix, "\n", { plain = true })) do
     local comment = line:match("^%s*//+%s*(.+)$")
-      or line:match("^%s*#%s*(.+)$")
-      or line:match("^%s*%-%-%s*(.+)$")
+        or line:match("^%s*#%s*(.+)$")
+        or line:match("^%s*%-%-%s*(.+)$")
     if comment then
       instruction = comment
     end
@@ -79,20 +78,20 @@ local function build_prompt(prefix, suffix)
   local directive = instruction ~= "" and ("Instruction from comment: " .. instruction .. "\n") or ""
   local file_info = "File: " .. filepath .. "\n"
   local import_info = #imports > 0
-    and ("Existing imports:\n" .. table.concat(imports, "\n") .. "\n")
-    or ""
+      and ("Existing imports:\n" .. table.concat(imports, "\n") .. "\n")
+      or ""
 
   return string.format(
     "You are a code completion engine. Complete the code below.\n"
-      .. "Language: %s\n"
-      .. "%s"
-      .. "%s"
-      .. "%s"
-      .. "Only output the completion text that comes AFTER the cursor position marked by <cursor/>.\n"
-      .. "Do NOT repeat any text that appears before <cursor/>.\n"
-      .. "No explanation, no markdown.\n\n"
-      .. "<prefix>\n%s<cursor/>\n</prefix>\n\n"
-      .. "<suffix>\n%s\n</suffix>",
+    .. "Language: %s\n"
+    .. "%s"
+    .. "%s"
+    .. "%s"
+    .. "Only output the completion text that comes AFTER the cursor position marked by <cursor/>.\n"
+    .. "Do NOT repeat any text that appears before <cursor/>.\n"
+    .. "No explanation, no markdown.\n\n"
+    .. "<prefix>\n%s<cursor/>\n</prefix>\n\n"
+    .. "<suffix>\n%s\n</suffix>",
     ft, file_info, import_info, directive, prefix, suffix
   )
 end
@@ -162,7 +161,9 @@ local function auto_import()
         vim.notify("auto_import: no actions returned", vim.log.levels.WARN)
         return
       end
-      vim.notify("auto_import: " .. #actions .. " action(s): " .. vim.inspect(vim.tbl_map(function(a) return a.title end, actions)), vim.log.levels.INFO)
+      vim.notify(
+      "auto_import: " .. #actions .. " action(s): " .. vim.inspect(vim.tbl_map(function(a) return a.title end, actions)),
+        vim.log.levels.INFO)
       local client = vim.lsp.get_client_by_id(ctx.client_id)
       if not client then return end
       for _, action in ipairs(actions) do
@@ -189,7 +190,7 @@ local function dismiss()
   state.accepting = false
   state.suggestions = {}
   state.index = 1
-  state.session = state.session + 1  -- invalidate any in-flight callbacks
+  state.session = state.session + 1 -- invalidate any in-flight callbacks
 end
 
 local function show_current()
@@ -263,7 +264,8 @@ local function fetch_suggestion(prompt, temperature, on_result)
     model = model,
     max_tokens = 512,
     temperature = temperature,
-    system = "You are a code completion engine. Only output the completion text itself, no explanation, no markdown fences.",
+    system =
+    "You are a code completion engine. Only output the completion text itself, no explanation, no markdown fences.",
     messages = {
       { role = "user", content = { { type = "text", text = prompt } } },
     },

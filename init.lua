@@ -23,7 +23,7 @@ require("lazy").setup("plugins", {
         "tohtml",
         "tutor",
         "zipPlugin",
-        "netrwPlugin",
+        -- "netrwPlugin",
       },
     },
   },
@@ -35,3 +35,4 @@ require("keymaps")
 require("lsp")
 require("ai")
 require("statusline")
+require("terminal")
