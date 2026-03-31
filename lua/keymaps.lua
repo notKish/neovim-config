@@ -76,9 +76,12 @@ map("n", "<leader>rn", function()
   local old = vim.api.nvim_buf_get_name(0)
   local new = vim.fn.input("Rename to: ", old, "file")
   if new == "" or new == old then return end
+  local old_buf = vim.api.nvim_get_current_buf()
   vim.fn.rename(old, new)
   vim.cmd("edit " .. vim.fn.fnameescape(new))
-  vim.cmd("bdelete #")
+  if vim.api.nvim_buf_is_valid(old_buf) and old_buf ~= vim.api.nvim_get_current_buf() then
+    vim.api.nvim_buf_delete(old_buf, { force = false })
+  end
 end, { desc = "Rename current file" })
 
 -- diagnostics

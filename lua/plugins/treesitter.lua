@@ -1,7 +1,12 @@
 return {
   "nvim-treesitter/nvim-treesitter",
   build = ":TSUpdate",
-  cmd = { "TSUpdate", "TSUpdateSync" },
+  cmd = {
+    "TSInstall",
+    "TSInstallFromGrammar",
+    "TSUpdate",
+    "TSUpdateSync",
+  },
   opts = {
     ensure_installed = {
       "lua",
@@ -80,6 +85,9 @@ return {
     },
   },
   config = function(_, opts)
-    require("nvim-treesitter.configs").setup(opts)
+    local parser_dir = vim.fn.stdpath("data") .. "/site"
+    opts.parser_install_dir = parser_dir
+    vim.opt.runtimepath:append(parser_dir)
+    require("nvim-treesitter").setup(opts)
   end,
 }

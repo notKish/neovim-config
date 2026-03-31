@@ -4,6 +4,7 @@ return {
   lazy = false,
   dependencies = {
     "L3MON4D3/LuaSnip",
+    "rafamadriz/friendly-snippets",
   },
   opts = {
     keymap = {
@@ -14,6 +15,8 @@ return {
       ["<C-f>"]     = { "scroll_documentation_down" },
       ["<C-p>"]     = { "show_signature", "hide_signature", "fallback" },
       ["<CR>"]      = { "accept", "fallback" },
+      ["<Up>"]      = { "select_prev", "fallback" },
+      ["<Down>"]    = { "select_next", "fallback" },
       ["<Tab>"]     = {
         function(cmp)
           if cmp.snippet_active() then
@@ -38,6 +41,9 @@ return {
     completion = {
       menu = {
         border = "rounded",
+      },
+      documentation = {
+        auto_show = true,
       },
       list = {
         selection = {
@@ -66,4 +72,9 @@ return {
       preset = "luasnip",
     },
   },
+  config = function(_, opts)
+    require("blink.cmp").setup(opts)
+    -- Load VSCode-style snippets from friendly-snippets (including Python basics)
+    require("luasnip.loaders.from_vscode").lazy_load()
+  end,
 }

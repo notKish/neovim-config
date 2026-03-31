@@ -14,7 +14,7 @@ vim.g.mapleader = " "
 
 require("lazy").setup("plugins", {
   defaults = { lazy = false },
-  install = { colorscheme = { "catppuccin-mocha" } },
+  install = { colorscheme = { "habamax" } },
   performance = {
     rtp = {
       disabled_plugins = {
@@ -29,8 +29,19 @@ require("lazy").setup("plugins", {
   },
 })
 
+-- Explicitly set colorscheme, but never fail startup if unavailable.
+local ok = pcall(vim.cmd.colorscheme, "catppuccin")
+if not ok then
+  pcall(vim.cmd.colorscheme, "habamax")
+end
+
 require("options")
 require("highlights")
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function()
+    require("highlights")
+  end,
+})
 require("keymaps")
 require("lsp")
 require("ai")
