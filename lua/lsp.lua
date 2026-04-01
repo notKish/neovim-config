@@ -4,8 +4,11 @@
 
 local map = vim.keymap.set
 local format_augroup = vim.api.nvim_create_augroup("LspFormatOnSave", { clear = true })
-local blink_ok, blink = pcall(require, "blink.cmp")
-local lsp_capabilities = blink_ok and blink.get_lsp_capabilities() or nil
+local lsp_capabilities = vim.lsp.protocol.make_client_capabilities()
+lsp_capabilities.textDocument.completion.completionItem.snippetSupport = true
+lsp_capabilities.textDocument.completion.completionItem.resolveSupport = {
+  properties = { "documentation", "detail", "additionalTextEdits" },
+}
 
 local function pyright_add_missing_imports()
   vim.lsp.buf.code_action({
@@ -48,6 +51,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local buf = args.buf
     local client = vim.lsp.get_client_by_id(args.data.client_id)
+
+    if client and client:supports_method("textDocument/completion")
+      and vim.lsp.completion and vim.lsp.completion.enable then
+      vim.lsp.completion.enable(true, client.id, buf, { autotrigger = true })
+    end
 
     -- keymaps
     local function bmap(mode, lhs, rhs, desc)

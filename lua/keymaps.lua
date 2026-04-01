@@ -44,6 +44,11 @@ map("n", "<leader>bb", function()
     if idx then vim.api.nvim_set_current_buf(bufs[idx]) end
   end)
 end, { desc = "Pick buffer" })
+map("n", "<leader><space>", function() require("search").find_files() end, { desc = "Find files" })
+map("n", "<leader>?", function() require("search").live_grep() end, { desc = "Live grep" })
+map("n", "<leader>fw", function() require("search").grep_word() end, { desc = "Grep word under cursor" })
+map("n", "<leader>fb", "<cmd>ls<cr>", { desc = "List buffers" })
+map("n", "<leader>fh", function() require("search").help_tags() end, { desc = "Help tags" })
 
 -- move lines (visual only)
 map("v", "<S-j>", ":m '>+1<cr>gv=gv", { desc = "Move selection down" })
