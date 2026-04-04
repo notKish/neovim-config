@@ -1,16 +1,15 @@
 vim.g.mapleader = " "
 
--- Explicitly set colorscheme, but never fail startup if unavailable.
-local ok = pcall(vim.cmd.colorscheme, "catppuccin")
-if not ok then
-  pcall(vim.cmd.colorscheme, "habamax")
-end
+-- Built-in retrobox; highlights.lua matches its palette for treesitter + statusline.
+pcall(function()
+  vim.cmd.colorscheme("retrobox")
+end)
 
 require("options")
-require("highlights")
+local highlights = require("highlights")
 vim.api.nvim_create_autocmd("ColorScheme", {
   callback = function()
-    require("highlights")
+    highlights.apply()
   end,
 })
 require("keymaps")

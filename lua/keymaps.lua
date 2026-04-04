@@ -12,11 +12,14 @@ map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
 
 -- window resize
 map("n", "<leader>w=", "<C-w>=", { desc = "Equalize all windows" })
+-- window splits
+map("n", "<leader>|", "<cmd>vsplit<cr>", { desc = "Vertical split" })
+map("n", "<leader>-", "<cmd>split<cr>", { desc = "Horizontal split" })
 -- window resize
-map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
-map("n", "<C-Down>", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
-map("n", "<C-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
-map("n", "<C-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
+map("n", "<M-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
+map("n", "<M-Down>", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
+map("n", "<M-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
+map("n", "<M-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
 
 -- buffers
 map("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
