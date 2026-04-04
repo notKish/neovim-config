@@ -4,6 +4,7 @@
 
 local map = vim.keymap.set
 local format_augroup = vim.api.nvim_create_augroup("LspFormatOnSave", { clear = true })
+local document_highlight_augroup = vim.api.nvim_create_augroup("LspDocumentHighlight", { clear = true })
 local blink_ok, blink = pcall(require, "blink.cmp")
 local lsp_capabilities = blink_ok and blink.get_lsp_capabilities() or nil
 
@@ -66,6 +67,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end
     bmap("n", "<leader>cf", function() vim.lsp.buf.format({ async = true }) end, "Format buffer")
     bmap("i", "<C-s>", vim.lsp.buf.signature_help, "Signature help")
+
+    -- highlight references for symbol under cursor
+    if client and client:supports_method("textDocument/documentHighlight") then
+      vim.api.nvim_clear_autocmds({ group = document_highlight_augroup, buffer = buf })
+      vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+        group = document_highlight_augroup,
+        buffer = buf,
+        callback = vim.lsp.buf.document_highlight,
+      })
+      vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+        group = document_highlight_augroup,
+        buffer = buf,
+        callback = vim.lsp.buf.clear_references,
+      })
+    end
 
     -- format on save
     if client and client:supports_method("textDocument/formatting") then
