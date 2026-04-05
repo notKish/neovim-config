@@ -15,16 +15,67 @@ map("n", "<leader>w=", "<C-w>=", { desc = "Equalize all windows" })
 -- window splits
 map("n", "<leader>|", "<cmd>vsplit<cr>", { desc = "Vertical split" })
 map("n", "<leader>-", "<cmd>split<cr>", { desc = "Horizontal split" })
--- window resize
-map("n", "<M-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
-map("n", "<M-Down>", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
-map("n", "<M-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
-map("n", "<M-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
+-- window resize (M-* for true meta; CSI for xterm-style Alt+arrows; M-b/M-f for Ghostty on macOS — Option+Left/Right
+-- are translated to ESC+b / ESC+f word-motion, not <M-Left>, when macos-option-as-alt is on)
+local resize_maps = {
+  { "<M-Up>", "<cmd>resize +2<cr>", "Increase window height" },
+  { "<M-Down>", "<cmd>resize -2<cr>", "Decrease window height" },
+  { "<M-Left>", "<cmd>vertical resize -2<cr>", "Decrease window width" },
+  { "<M-Right>", "<cmd>vertical resize +2<cr>", "Increase window width" },
+  { "<M-b>", "<cmd>vertical resize -2<cr>", "Decrease window width" },
+  { "<M-f>", "<cmd>vertical resize +2<cr>", "Increase window width" },
+  -- Alt+arrow: CSI 1 ; 3 (xterm) or ; 9 (some terminals) — Neovim often never sees <M-Left>
+  { "\x1b[1;3A", "<cmd>resize +2<cr>", "Increase window height" },
+  { "\x1b[1;3B", "<cmd>resize -2<cr>", "Decrease window height" },
+  { "\x1b[1;3D", "<cmd>vertical resize -2<cr>", "Decrease window width" },
+  { "\x1b[1;3C", "<cmd>vertical resize +2<cr>", "Increase window width" },
+  { "\x1b[1;9A", "<cmd>resize +2<cr>", "Increase window height" },
+  { "\x1b[1;9B", "<cmd>resize -2<cr>", "Decrease window height" },
+  { "\x1b[1;9D", "<cmd>vertical resize -2<cr>", "Decrease window width" },
+  { "\x1b[1;9C", "<cmd>vertical resize +2<cr>", "Increase window width" },
+}
+for _, row in ipairs(resize_maps) do
+  map("n", row[1], row[2], { desc = row[3], silent = true })
+end
 
 -- buffers
 map("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 map("n", "<S-l>", "<cmd>bnext<cr>", { desc = "Next buffer" })
-map("n", "<leader>bd", "<cmd>bdelete<cr>", { desc = "Delete buffer" })
+
+---Pick another listed buffer for the current window, then delete `buf` (keeps splits).
+local function delete_buffer_keep_windows(buf)
+  local function pick_other()
+    local alt = vim.fn.bufnr("#")
+    if alt ~= -1 and alt ~= buf and vim.api.nvim_buf_is_valid(alt) and vim.bo[alt].buflisted and vim.api.nvim_buf_is_loaded(alt) then
+      return alt
+    end
+    for _, b in ipairs(vim.api.nvim_list_bufs()) do
+      if b ~= buf and vim.api.nvim_buf_is_valid(b) and vim.bo[b].buflisted and vim.api.nvim_buf_is_loaded(b) then
+        return b
+      end
+    end
+    return nil
+  end
+
+  local next_buf = pick_other()
+  if next_buf then
+    vim.api.nvim_set_current_buf(next_buf)
+  else
+    vim.cmd("enew")
+  end
+
+  local ok, err = pcall(vim.api.nvim_buf_delete, buf, { force = false })
+  if not ok then
+    vim.api.nvim_set_current_buf(buf)
+    if err then
+      vim.notify(tostring(err), vim.log.levels.ERROR)
+    end
+  end
+end
+
+map("n", "<leader>bd", function()
+  delete_buffer_keep_windows(vim.api.nvim_get_current_buf())
+end, { desc = "Delete buffer (keep window layout)" })
 map("n", "<leader>bo", function()
   local cur = vim.api.nvim_get_current_buf()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
