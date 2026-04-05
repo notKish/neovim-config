@@ -143,6 +143,7 @@ vim.diagnostic.config({
 vim.lsp.config("lua_ls", {
   cmd = { "lua-language-server" },
   filetypes = { "lua" },
+  capabilities = lsp_capabilities,
   settings = {
     Lua = {
       runtime = { version = "LuaJIT" },
@@ -159,6 +160,7 @@ vim.lsp.config("lua_ls", {
 vim.lsp.config("ts_ls", {
   cmd = { "typescript-language-server", "--stdio" },
   filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+  capabilities = lsp_capabilities,
 })
 
 vim.lsp.config("pyright", {
@@ -188,11 +190,13 @@ vim.lsp.config("ruff", {
 vim.lsp.config("clangd", {
   cmd = { "clangd" },
   filetypes = { "c", "cpp", "objc", "objcpp" },
+  capabilities = lsp_capabilities,
 })
 
 vim.lsp.config("jdtls", {
   cmd = { "jdtls" },
   filetypes = { "java" },
+  capabilities = lsp_capabilities,
   settings = {
     java = {
       eclipse = { downloadSources = true },

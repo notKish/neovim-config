@@ -98,6 +98,8 @@ map("n", "<leader>bb", function()
     if idx then vim.api.nvim_set_current_buf(bufs[idx]) end
   end)
 end, { desc = "Pick buffer" })
+
+-- pickers: vim.ui + rg (no Telescope; :h vim.ui)
 map("n", "<leader><space>", function() require("search").find_files() end, { desc = "Find files" })
 map("n", "<leader>?", function() require("search").live_grep() end, { desc = "Live grep" })
 map("n", "<leader>fw", function() require("search").grep_word() end, { desc = "Grep word under cursor" })

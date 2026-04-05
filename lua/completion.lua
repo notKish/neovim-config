@@ -1,8 +1,13 @@
+-- Native insert completion: LSP via vim.lsp.completion (:h lsp-completion), snippets via vim.snippet (:h vim.snippet)
 local map = vim.keymap.set
 
 vim.opt.completeopt = { "menu", "menuone", "noselect", "popup", "fuzzy" }
 vim.opt.pumheight = 12
+vim.opt.pumborder = "rounded"
 vim.opt.shortmess:append("c")
+
+-- Neovim 0.12+: show completion menu while typing (pairs with vim.lsp.completion.enable autotrigger)
+vim.opt.autocomplete = true
 
 local function has_snippet(direction)
   if not vim.snippet or type(vim.snippet.active) ~= "function" then

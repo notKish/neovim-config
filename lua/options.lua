@@ -19,6 +19,7 @@ opt.smartindent    = true
 -- search
 opt.ignorecase     = true
 opt.smartcase      = true
+opt.infercase      = true -- recommended with 'autocomplete' + ignorecase (:h 'autocomplete')
 opt.hlsearch       = false
 opt.incsearch      = true
 

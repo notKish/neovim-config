@@ -1,3 +1,4 @@
+-- Project search without Telescope: rg + vim.ui + quickfix (:h vim.ui)
 local M = {}
 
 local function notify(msg, level)
