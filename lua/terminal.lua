@@ -14,6 +14,8 @@ local function toggle_terminal()
 
   if not terminal_buf or not vim.api.nvim_buf_is_valid(terminal_buf) then
     terminal_buf = vim.api.nvim_create_buf(false, true)
+    -- Buffer-local Esc so other term buffers (e.g. lazygit) receive Escape for the TUI.
+    map("t", "<Esc>", "<C-\\><C-n>", { buffer = terminal_buf, desc = "Exit terminal mode" })
     vim.api.nvim_win_set_buf(win, terminal_buf)
     vim.fn.jobstart(vim.o.shell, {
       term = true,
@@ -31,7 +33,6 @@ end
 
 map("n", "<C-/>", toggle_terminal, { desc = "Toggle terminal" })
 map("t", "<C-/>", toggle_terminal, { desc = "Toggle terminal" })
-map("t", "<Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 map("t", "<C-h>", "<C-\\><C-n><C-w>h", { desc = "Go to left window" })
 map("t", "<C-j>", "<C-\\><C-n><C-w>j", { desc = "Go to lower window" })
 map("t", "<C-k>", "<C-\\><C-n><C-w>k", { desc = "Go to upper window" })

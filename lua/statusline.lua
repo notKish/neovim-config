@@ -13,28 +13,60 @@ end
 local function get_mode()
   local mode = vim.api.nvim_get_mode().mode
   local mode_map = {
-    n = "NORMAL",
-    no = "NORMAL",
-    v = "VISUAL",
-    V = "VISUAL",
-    ["\x16"] = "V-BLOCK",
-    s = "SELECT",
-    S = "SELECT",
-    ["\x13"] = "V-SELECT",
-    i = "INSERT",
-    ic = "INSERT",
-    R = "REPLACE",
-    Rv = "V-REPLACE",
-    c = "COMMAND",
+    n = "N",
+    no = "N",
+    v = "V",
+    V = "V",
+    ["\x16"] = "VB",
+    s = "S",
+    S = "S",
+    ["\x13"] = "VS",
+    i = "I",
+    ic = "I",
+    R = "R",
+    Rv = "RV",
+    c = "C",
     cv = "EX",
     ce = "EX",
-    r = "INSERT",
-    rm = "INSERT",
-    ["r?"] = "INSERT",
-    ["!"] = "INSERT",
-    t = "TERMINAL",
+    r = "R",
+    rm = "R",
+    ["r?"] = "R",
+    ["!"] = "!",
+    t = "T",
   }
-  return mode_map[mode] or "UNKNOWN"
+  return mode_map[mode] or "?"
+end
+
+---Pad with spaces on the right until display width is `width`.
+local function pad_display(s, width)
+  local w = vim.fn.strwidth(s)
+  if w >= width then
+    return s
+  end
+  return s .. string.rep(" ", width - w)
+end
+
+---Truncate path from the left; result has display width exactly `width` (stable in vertical splits).
+local function dir_fixed_width(s, width)
+  if vim.fn.strwidth(s) <= width then
+    return pad_display(s, width)
+  end
+  local ell = "…"
+  local room = width - vim.fn.strwidth(ell)
+  if room < 1 then
+    return vim.fn.strcharpart(ell, 0, width)
+  end
+  local n = vim.fn.strchars(s, true)
+  local acc = ""
+  for i = n - 1, 0, -1 do
+    local ch = vim.fn.strcharpart(s, i, 1)
+    local cand = ch .. acc
+    if vim.fn.strwidth(cand) > room then
+      break
+    end
+    acc = cand
+  end
+  return pad_display(ell .. acc, width)
 end
 
 local function get_readonly()
@@ -63,10 +95,13 @@ local function get_filetype()
   return ft
 end
 
+-- Directory segment width in display cells (works in vertical splits).
+local DIR_WIDTH = 40
+
 function M.statusline()
   local git = get_git_branch()
   local mode = get_mode()
-  local dir = vim.fn.fnamemodify(vim.fn.expand("%:p:h"), ":~:.")
+  local dir = dir_fixed_width(vim.fn.fnamemodify(vim.fn.expand("%:p:h"), ":~:."), DIR_WIDTH)
   local readonly = get_readonly()
   local ft = get_filetype()
   local lnum = vim.fn.line(".")
@@ -81,7 +116,7 @@ function M.statusline()
   end
 
   local left = string.format(
-    "%%#%s#%s%%#StatuslineMode# %s %%#StatuslineSubtle# %s%%#StatuslineReadonly#%s %%#StatuslineInfo#%s | Ln %d, Col %d | %d%%%% ",
+    "%%#%s#%s%%#StatuslineMode# %-2s %%#StatuslineSubtle# %s%%#StatuslineReadonly#%s %%#StatuslineInfo#%s | %d, %d | %d%%%% ",
     git_hl, git, mode, dir, readonly, ft, lnum, col, pct
   )
 
