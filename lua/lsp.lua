@@ -24,19 +24,30 @@ local function pyright_add_missing_imports()
   })
 end
 
--- Sort Snippet (mini.snippets / friendly-snippets) before other LSP kinds so short prefixes like "d"
--- still show `def` etc. near the top of the pum. Only the first |vim.lsp.completion.enable| for a
--- buffer stores `cmp`, so pass this from every client — whichever attaches first wins.
-local snippet_kind = vim.lsp.protocol.CompletionItemKind.Snippet
+-- Pum order: (1) LSP semantic — everything except Snippet/Text kinds; (2) Snippet — mini.snippets;
+-- (3) Text — plain Text kind. Only the first |vim.lsp.completion.enable| for a buffer stores `cmp`,
+-- so pass this from every client — whichever attaches first wins.
+local kinds = vim.lsp.protocol.CompletionItemKind
+local snippet_kind, text_kind = kinds.Snippet, kinds.Text
+local function completion_tier(item)
+  if not item then
+    return 1
+  end
+  local k = item.kind
+  if k == snippet_kind then
+    return 2
+  end
+  if k == text_kind then
+    return 3
+  end
+  return 1
+end
 local function lsp_completion_cmp(a, b)
   local ia = vim.tbl_get(a, "user_data", "nvim", "lsp", "completion_item")
   local ib = vim.tbl_get(b, "user_data", "nvim", "lsp", "completion_item")
-  local ka, kb = ia and ia.kind, ib and ib.kind
-  if ka == snippet_kind and kb ~= snippet_kind then
-    return true
-  end
-  if kb == snippet_kind and ka ~= snippet_kind then
-    return false
+  local ta, tb = completion_tier(ia), completion_tier(ib)
+  if ta ~= tb then
+    return ta < tb
   end
   local la = ia and (ia.sortText or ia.label) or ""
   local lb = ib and (ib.sortText or ib.label) or ""
