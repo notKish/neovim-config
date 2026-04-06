@@ -1,4 +1,4 @@
-map = vim.keymap.set
+local map = vim.keymap.set
 local terminal_buf = nil
 
 local function toggle_terminal()

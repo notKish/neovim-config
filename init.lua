@@ -1,6 +1,6 @@
 vim.g.mapleader = " "
 
--- Built-in plugin manager (Neovim 0.12+): :h vim.pack
+-- External plugins via vim.pack: treesitter, friendly-snippets, mini.snippets (see lua/pack-plugins.lua). :h vim.pack :Pack
 require("pack-plugins")
 
 -- Built-in retrobox; highlights.lua matches its palette for treesitter + statusline.
@@ -18,6 +18,13 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 require("keymaps")
 require("lsp")
+-- After LspAttach is registered: mini.snippets attaches here so vim.lsp.completion.enable runs (:h lsp-completion).
+do
+  local ok, err = pcall(require, "snippet_pack")
+  if not ok then
+    vim.notify("mini.snippets failed: " .. tostring(err), vim.log.levels.ERROR)
+  end
+end
 require("ai")
 require("statusline")
 require("terminal")

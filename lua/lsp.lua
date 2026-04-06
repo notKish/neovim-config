@@ -24,28 +24,71 @@ local function pyright_add_missing_imports()
   })
 end
 
-local function get_completion_item()
-  local completed = vim.v.completed_item or {}
-  local user_data = completed.user_data
+-- Sort Snippet (mini.snippets / friendly-snippets) before other LSP kinds so short prefixes like "d"
+-- still show `def` etc. near the top of the pum. Only the first |vim.lsp.completion.enable| for a
+-- buffer stores `cmp`, so pass this from every client — whichever attaches first wins.
+local snippet_kind = vim.lsp.protocol.CompletionItemKind.Snippet
+local function lsp_completion_cmp(a, b)
+  local ia = vim.tbl_get(a, "user_data", "nvim", "lsp", "completion_item")
+  local ib = vim.tbl_get(b, "user_data", "nvim", "lsp", "completion_item")
+  local ka, kb = ia and ia.kind, ib and ib.kind
+  if ka == snippet_kind and kb ~= snippet_kind then
+    return true
+  end
+  if kb == snippet_kind and ka ~= snippet_kind then
+    return false
+  end
+  local la = ia and (ia.sortText or ia.label) or ""
+  local lb = ib and (ib.sortText or ib.label) or ""
+  return la < lb
+end
 
-  -- Native completion metadata shape
-  local item = vim.tbl_get(user_data, "nvim", "lsp", "completion_item")
-  if item then return item end
-
-  -- Some completion engines encode metadata as JSON in user_data.
-  if type(user_data) == "string" and user_data ~= "" then
-    local ok, decoded = pcall(vim.json.decode, user_data)
-    if ok and type(decoded) == "table" then
-      item = vim.tbl_get(decoded, "nvim", "lsp", "completion_item")
-        or vim.tbl_get(decoded, "completion_item")
-      if item then return item end
+-- Language servers often advertise only "." "(" etc. as triggerCharacters. Neovim autotrigger only
+-- queries clients registered for the typed key (:h lsp-completion), so without this, "def" only
+-- hits mini.snippets — Pyright never runs until <C-Space> (Invoked). Merge identifier chars first.
+--
+-- Include mini.snippets: |vim.lsp.completion.get()| (e.g. <C-Space>) uses every client in
+-- buf_handle.clients, but InsertCharPre autotrigger uses buf_handle.triggers[char] only. If
+-- triggerCharacters were empty or dropped when mini attached, mini would still be "enabled" for
+-- invoked completion but never run on "d" — exactly "works on C-Space, not on auto trigger".
+local function merge_keyword_completion_triggers(client)
+  local sc = client.server_capabilities
+  if type(sc) ~= "table" then
+    return
+  end
+  -- LSP allows completionProvider: true (shorthand). In Lua `true or {}` is still true, so
+  -- triggerCharacters never get merged and |vim.lsp.completion.enable| sees no triggers.
+  if type(sc.completionProvider) ~= "table" then
+    sc.completionProvider = {}
+  end
+  local cp = sc.completionProvider
+  local tc = cp.triggerCharacters
+  if type(tc) ~= "table" then
+    tc = {}
+    cp.triggerCharacters = tc
+  end
+  local seen = {}
+  for _, ch in ipairs(tc) do
+    if type(ch) == "string" and ch ~= "" then
+      seen[ch] = true
     end
   end
-
-  -- Generic fallback if plugin stores the item directly.
-  if type(user_data) == "table" then
-    return user_data.completion_item
+  local function add(ch)
+    if not seen[ch] then
+      seen[ch] = true
+      tc[#tc + 1] = ch
+    end
   end
+  for b = string.byte("a"), string.byte("z") do
+    add(string.char(b))
+  end
+  for b = string.byte("A"), string.byte("Z") do
+    add(string.char(b))
+  end
+  for b = string.byte("0"), string.byte("9") do
+    add(string.char(b))
+  end
+  add("_")
 end
 
 vim.api.nvim_create_autocmd("LspAttach", {
@@ -53,9 +96,18 @@ vim.api.nvim_create_autocmd("LspAttach", {
     local buf = args.buf
     local client = vim.lsp.get_client_by_id(args.data.client_id)
 
-    if client and client:supports_method("textDocument/completion")
-      and vim.lsp.completion and vim.lsp.completion.enable then
-      vim.lsp.completion.enable(true, client.id, buf, { autotrigger = true })
+    -- Ruff: prefer Pyright for completion; including Ruff can stall merged completion if its
+    -- request never finishes, hiding mini.snippets and other clients.
+    if client
+      and client.name ~= "ruff"
+      and client:supports_method("textDocument/completion")
+      and vim.lsp.completion
+      and vim.lsp.completion.enable then
+      merge_keyword_completion_triggers(client)
+      vim.lsp.completion.enable(true, client.id, buf, {
+        autotrigger = true,
+        cmp = lsp_completion_cmp,
+      })
     end
 
     -- keymaps
@@ -74,7 +126,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
       bmap("n", "<leader>ci", pyright_add_missing_imports, "Add missing imports (Pyright)")
     end
     bmap("n", "<leader>cf", function() vim.lsp.buf.format({ async = true }) end, "Format buffer")
-    bmap("i", "<C-s>", vim.lsp.buf.signature_help, "Signature help")
+    bmap("i", "<C-k>", vim.lsp.buf.signature_help, "Signature help")
 
     -- highlight references for symbol under cursor
     if client and client:supports_method("textDocument/documentHighlight") then
@@ -111,18 +163,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
           })
         end,
       })
-    end
-  end,
-})
-
--- Auto-apply additionalTextEdits (imports) when accepting LSP completion
-vim.api.nvim_create_autocmd("CompleteDone", {
-  callback = function()
-    local item = get_completion_item()
-    if not item then return end
-    local edits = item.additionalTextEdits
-    if edits and #edits > 0 then
-      vim.lsp.util.apply_text_edits(edits, vim.api.nvim_get_current_buf(), "utf-8")
     end
   end,
 })

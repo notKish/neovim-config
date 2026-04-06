@@ -1,13 +1,18 @@
--- Native insert completion: LSP via vim.lsp.completion (:h lsp-completion), snippets via vim.snippet (:h vim.snippet)
+-- Native insert completion: LSP (vim.lsp.completion) + mini.snippets LSP (friendly-snippets); expand/jump via vim.snippet.
 local map = vim.keymap.set
 
+-- "popup": extra docs/detail (LSP resolve) for the highlighted pum item (:h completeopt).
+-- With "noselect", no row is highlighted until you <C-n>/<C-p> — move once to show import/module "detail" in the popup.
 vim.opt.completeopt = { "menu", "menuone", "noselect", "popup", "fuzzy" }
 vim.opt.pumheight = 12
 vim.opt.pumborder = "rounded"
 vim.opt.shortmess:append("c")
 
--- Neovim 0.12+: show completion menu while typing (pairs with vim.lsp.completion.enable autotrigger)
-vim.opt.autocomplete = true
+-- Do NOT set 'autocomplete' here. That option triggers <C-n>-style keyword completion (from 'complete'
+-- sources like buffer words) on TextChangedI, which opens the pum before InsertCharPre fires.
+-- vim.lsp.completion.enable autotrigger (InsertCharPre) early-returns when pumvisible() != 0, so LSP
+-- and snippets would never be queried after the first character typed. Use autotrigger=true only
+-- (set in lsp.lua LspAttach, with triggerChars extended to alnum via merge_keyword_completion_triggers).
 
 local function has_snippet(direction)
   if not vim.snippet or type(vim.snippet.active) ~= "function" then
@@ -24,8 +29,12 @@ local function jump_snippet(direction)
 end
 
 map("i", "<C-Space>", function()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-x><C-o>", true, false, true), "n", false)
-end, { desc = "Trigger completion" })
+  if vim.lsp.completion and vim.lsp.completion.get then
+    vim.lsp.completion.get()
+  else
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-x><C-o>", true, false, true), "n", false)
+  end
+end, { desc = "Trigger LSP completion" })
 
 map("i", "<CR>", function()
   if vim.fn.pumvisible() == 1 then

@@ -374,10 +374,9 @@ vim.keymap.set("i", "<C-e>", function()
   if state.active then
     dismiss()
   else
-    -- fall back to default <C-e> (close completion menu)
-    return vim.fn.pumvisible() == 1 and "<C-e>" or "<C-e>"
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-e>", true, false, true), "n", false)
   end
-end, { desc = "AI dismiss suggestion" })
+end, { desc = "AI dismiss / close completion menu" })
 
 -- auto-dismiss if cursor moves or mode changes (but not during line accept)
 vim.api.nvim_create_autocmd("CursorMovedI", {

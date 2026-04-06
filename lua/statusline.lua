@@ -121,8 +121,8 @@ function M.statusline()
   )
 
   local right = string.format(
-    "%%=%s%%#StatuslineSearch#%s%%#StatuslineSubtle# %s ",
-    "%=", search, enc
+    "%%=%%#StatuslineSearch#%s%%#StatuslineSubtle# %s ",
+    search, enc
   )
 
   return left .. right
