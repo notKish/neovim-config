@@ -1,0 +1,269 @@
+AWK + UNDERRATED UNIX GUIDE                          *awk-underrated-unix-guide*
+
+Open with :help awk-underrated-unix-guide.
+
+======================================================================
+SAMPLE DATA (USE FOR PRACTICE)                             *awk-guide-data*
+======================================================================
+
+  Paste any block into a scratch buffer, then run the examples below.
+
+  CSV sample:
+    name,age,team,score,qty
+    alice,24,dev,10,2
+    bob,31,ops,7,4
+    carol,29,dev,14,1
+    dave,35,ops,9,3
+
+  Log-like sample:
+    2026-04-07 INFO auth login_ok user=alice
+    2026-04-07 WARN api slow_request path=/v1/report ms=842
+    2026-04-07 ERROR db timeout table=orders ms=1200
+    2026-04-07 INFO auth logout user=bob
+
+  Key/value sample:
+    env=prod service=api status=200 latency=42
+    env=prod service=db status=500 latency=330
+    env=staging service=api status=200 latency=55
+
+  Quick way to insert CSV sample directly:
+    :read !printf "name,age,team,score,qty\nalice,24,dev,10,2\nbob,31,ops,7,4\ncarol,29,dev,14,1\ndave,35,ops,9,3\n"
+
+======================================================================
+AWK MENTAL MODEL
+======================================================================
+
+  Pattern { action }
+
+  awk runs action for each input line where pattern matches.
+  Common fields:
+    $0   full line
+    $1   first field
+    $NF  last field
+    NR   current row number
+    NF   number of fields
+
+  Common flags:
+    -F,      use comma as delimiter
+    -F'\t'   use tab delimiter
+    -v x=10  pass variable x to awk
+
+======================================================================
+AWK BASICS (START HERE)                                   *awk-guide-basics*
+======================================================================
+
+  Think: awk reads one line at a time, splits it into fields, then runs
+  your code.
+
+  Input sample:
+    alice,24,dev
+    bob,31,ops
+
+  1) Print whole line ($0):
+
+    awk -F, '{print $0}'
+    Output:
+      alice,24,dev
+      bob,31,ops
+
+  2) Print first field ($1):
+
+    awk -F, '{print $1}'
+    Output:
+      alice
+      bob
+
+  3) Print first + third fields:
+
+    awk -F, '{print $1, $3}'
+    Output:
+      alice dev
+      bob ops
+
+  4) Add row numbers (NR):
+
+    awk -F, '{print NR ":" $0}'
+    Output:
+      1:alice,24,dev
+      2:bob,31,ops
+
+  5) Filter rows (pattern):
+
+    awk -F, '$3=="dev" {print $0}'
+    Output:
+      alice,24,dev
+
+  6) Numeric condition:
+
+    awk -F, '$2 >= 30 {print $1, $2}'
+    Output:
+      bob 31
+
+  7) Sum a column:
+
+    awk -F, '{s+=$2} END{print s}'
+    Output:
+      55
+
+  8) BEGIN and END blocks:
+
+    awk -F, 'BEGIN{print "name role"} {print $1, $3} END{print "done"}'
+    Output:
+      name role
+      alice dev
+      bob ops
+      done
+
+  In Neovim, same idea:
+    :%!awk -F, '{print $1}'
+    (replace buffer with first CSV column)
+
+  Why this works: :%!awk '{$1=$1}1'
+
+    Input line:
+      "   one     two		three   "
+
+    :%!awk '1'
+      Prints line as-is (spacing stays messy).
+
+    :%!awk '{$1=$1}1'
+      Rebuilds $0 from fields and prints it.
+      Output becomes:
+        one two three
+
+======================================================================
+AWK DAILY RECIPES                                          *awk-guide-recipes*
+======================================================================
+
+  Print line numbers:
+
+  :%!awk '{print NR ": " $0}'
+
+  Keep non-empty lines:
+
+  :%!awk 'NF'
+
+  Trim and normalize spaces:
+
+  :%!awk '{$1=$1}1'
+
+  Sum a numeric column (col3):
+
+  :%write !awk -F, '{s+=$3} END {print s}'
+
+  Filter rows by column value:
+
+  :%!awk -F, '$2 == "active"'
+
+  Print only selected columns:
+
+  :%!awk -F, '{print $1 "," $4}'
+
+  CSV with header + sorted body:
+
+  :2,$!awk -F, '$3+0 >= 100'
+      Keep rows 2..end where column 3 is >= 100.
+
+  Frequency table (selected lines):
+
+  :'<,'>!awk '{c[$0]++} END {for (k in c) print c[k], k}' | sort -nr
+
+======================================================================
+AWK POWER MOVES                                            *awk-guide-powermoves*
+======================================================================
+
+  Add computed column:
+
+  :%!awk -F, 'BEGIN{OFS=","} NR==1{print $0,"total"; next} {print $0,$3*$4}'
+
+  Reformat delimiters:
+
+  :%!awk -F, 'BEGIN{OFS=" | "} {print $1,$2,$3}'
+
+  Join wrapped lines into paragraphs:
+
+  :%!awk 'BEGIN{RS=""; ORS="\n\n"} {gsub(/\n/," "); print}'
+
+  Remove duplicate keys by first column:
+
+  :%!awk -F, '!seen[$1]++'
+
+======================================================================
+UNDERRATED UNIX COMMANDS                                 *underrated-unix-guide*
+======================================================================
+
+  column -t
+      Pretty print delimited text as aligned table.
+      Example: :%!column -t -s,
+      Example: :read !printf "name,score\nalice,10\nbob,7\n" | column -t -s,
+
+  paste
+      Merge lines from multiple streams side-by-side.
+      Example: :read !paste -d, names.txt emails.txt
+      Example: :read !paste -d'|' left.txt right.txt
+
+  nl
+      Number lines (better control than cat -n).
+      Example: :%!nl -ba
+      Example: :%!nl -ba -w2 -s': '
+
+  pr
+      Fast multi-column print-like layout.
+      Example: :%!pr -t -2
+      Example: :%!pr -t -3
+
+  comm
+      Compare two sorted files line-by-line.
+      Example: :read !comm -3 <(sort a.txt) <(sort b.txt)
+      Note: process substitution (<(...)) requires bash/zsh shell support.
+      Example (portable): :read !sort a.txt > /tmp/a.s; sort b.txt > /tmp/b.s; comm -3 /tmp/a.s /tmp/b.s
+
+  join
+      SQL-like join for two sorted files by key.
+      Example: :read !join -t, -1 1 -2 1 left.csv right.csv
+      Example: :read !join -t, -1 1 -2 1 <(sort -t, -k1,1 left.csv) <(sort -t, -k1,1 right.csv)
+
+  xargs
+      Turn lines into command arguments.
+      Example: :'<,'>write !xargs -n1 echo
+      Example: :'<,'>write !xargs -I{} printf "file: %s\n" "{}"
+      Example: :'<,'>write !xargs -0 -n1 rm
+               (use with NUL-delimited input, e.g. find -print0)
+
+  sponge (from moreutils)
+      Read all input before writing output (safe in-place pipeline writes).
+      Example: :%!sed 's/foo/bar/g' | sponge %
+      Example: :%!awk '{$1=$1}1' | sponge %
+
+======================================================================
+NEOVIM INTEGRATION PATTERNS                          *awk-guide-nvim-patterns*
+======================================================================
+
+  Replace selection with awk output:
+
+  1. Visual select lines
+  2. :'<,'>!awk '...'
+
+  Keep file unchanged but inspect stats:
+
+  :%write !awk 'END {print NR, "rows"}'
+
+  Insert reports below cursor:
+
+  :read !awk -F, '{s+=$3} END {print "sum_col3=" s}' %
+
+  Populate quickfix from awk-generated vimgrep lines:
+
+  :cexpr system('awk -F: ''{print $1 ":" $2 ":" $3 ":" $4}'' report.txt')
+  :copen
+
+======================================================================
+SAFETY NOTES                                             *awk-guide-safety*
+======================================================================
+
+  • Run new filters on :'<,'> range first.
+  • Use u immediately if output is wrong.
+  • For complex CSV quoting, use csvkit, xsv, or miller (mlr).
+  • Prefer BEGIN{OFS=","} when printing CSV from awk.
+
+======================================================================

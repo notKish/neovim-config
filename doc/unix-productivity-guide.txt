@@ -1,0 +1,205 @@
+UNIX PRODUCTIVITY GUIDE                                  *unix-productivity-guide*
+
+Open with :help unix-productivity-guide from any buffer.
+
+======================================================================
+CORE PATTERN: EDIT THROUGH UNIX COMMANDS
+======================================================================
+
+  :read !{cmd}           Insert command output below cursor
+  :{range}write !{cmd}   Send lines to command (does not replace buffer)
+  :{range}!{cmd}         Replace lines with command output
+  :%!{cmd}               Replace entire buffer with command output
+
+  Safe loop:
+  1. Start with a small range (for example: :'<,'>!cmd)
+  2. Verify output
+  3. Scale to full buffer (:!%cmd equivalent is :%!cmd)
+  4. Undo with u if needed
+
+======================================================================
+READ OUTPUT INTO BUFFER                                  *unix-productivity-read*
+======================================================================
+
+  :read !date
+      Insert current date/time below cursor.
+
+  :read !ls -1
+      Insert one filename per line from current working directory.
+
+  :0read !git rev-parse --abbrev-ref HEAD
+      Insert current git branch at top of file.
+
+  :$read !rg --files | sort
+      Append sorted file list to end of current buffer.
+
+======================================================================
+FILTER OR REWRITE TEXT                                   *unix-productivity-filter*
+======================================================================
+
+  :'<,'>!sort
+      Sort selected lines alphabetically.
+
+  :%!sort
+      Sort whole buffer alphabetically.
+
+  :%!sort -u
+      Sort and deduplicate whole buffer.
+
+  :%!awk '{$1=$1}1'
+      Normalize spacing (collapse repeated whitespace).
+
+  :'<,'>!tr '[:upper:]' '[:lower:]'
+      Lowercase selected text.
+
+  :'<,'>!sed 's/[[:space:]]\\+$//'
+      Remove trailing whitespace in selected lines.
+
+======================================================================
+SORTING RECIPES                                           *unix-productivity-sort*
+======================================================================
+
+  Built-in Ex sort (fast, no shell):
+
+  :sort
+      Sort current line range lexicographically.
+
+  :'<,'>sort i
+      Case-insensitive sort for selected lines.
+
+  :'<,'>sort n
+      Numeric sort (line starts with number).
+
+  :'<,'>sort!
+      Reverse sort.
+
+  :'<,'>sort u
+      Sort and keep unique lines.
+
+  Shell sort (more control):
+
+  :'<,'>!sort -t, -k2,2
+      Sort by second comma-separated field.
+
+  :'<,'>!sort -V
+      Natural version sort (1, 2, 10).
+
+======================================================================
+CSV WORKFLOWS                                             *unix-productivity-csv*
+======================================================================
+
+  Assume simple CSV (no embedded commas in quoted fields).
+  For complex CSV quoting rules, prefer csvkit if installed.
+
+  Sort CSV by column while keeping header:
+
+  :2,$!sort -t, -k3,3
+      Sort rows 2..end by column 3, keep row 1 header unchanged.
+
+  Keep only selected columns (example: col1 + col4):
+
+  :2,$!cut -d, -f1,4
+      Rewrite data rows with fields 1 and 4.
+
+  Unique rows while preserving header:
+
+  :2,$!sort -u
+      Deduplicate rows 2..end.
+
+  Summarize numeric column (example: sum col3):
+
+  :2,$write !awk -F, '{s+=$3} END {print s}'
+      Sends data rows to awk and prints total in command output.
+
+======================================================================
+PIPE BUFFER TO COMMAND OUTPUT LOG                        *unix-productivity-write*
+======================================================================
+
+  :'<,'>write !wc -l
+      Count lines in selection without changing buffer text.
+
+  :%write !sed -n '1,10p'
+      Preview first 10 lines through external command.
+
+  :%write !pbcopy
+      macOS: copy full buffer to clipboard through shell.
+
+======================================================================
+COUNTING + STATS                                         *unix-productivity-count*
+======================================================================
+
+  Line count from selection:
+
+  :'<,'>write !wc -l
+      Print number of selected lines.
+
+  Whole buffer counts:
+
+  :%write !wc -l
+      Line count.
+
+  :%write !wc -w
+      Word count.
+
+  :%write !wc -c
+      Byte count.
+
+  Current file on disk:
+
+  :!wc -l %
+      Count lines in current file (% expands to current filename).
+
+  Unique and frequency counts:
+
+  :'<,'>!sort | uniq -c | sort -nr
+      Frequency table for selected lines (most common first).
+
+  :%write !awk 'END {print NR " lines"}'
+      Alternative line count using awk.
+
+======================================================================
+PROJECT HACKS                                             *unix-productivity-hacks*
+======================================================================
+
+  Build quick TODO list from ripgrep:
+
+  :read !rg -n "TODO|FIXME" .
+      Insert matching file:line:text entries.
+
+  Insert changed files list for commit notes:
+
+  :read !git diff --name-only
+      Append changed filenames to current note buffer.
+
+  Grab diagnostics-like grep results then navigate with quickfix:
+
+  :cexpr system('rg --vimgrep "pattern" .')
+  :copen
+      Populate quickfix from rg output and open results list.
+
+======================================================================
+SAFETY + ERGONOMICS                                     *unix-productivity-safety*
+======================================================================
+
+  u / <C-r>
+      Undo and redo after filters.
+
+  :earlier 5m
+      Jump buffer state back in time.
+
+  :setlocal undofile
+      Persist undo history across sessions for this buffer.
+
+  :new | setlocal buftype=nofile bufhidden=wipe noswapfile
+      Open scratch buffer for experiments before applying to real file.
+
+  Tip: run filters on visual selection first, then full buffer.
+
+======================================================================
+RELATED GUIDES
+======================================================================
+
+  :help awk-underrated-unix-guide
+      Practical awk recipes + underrated Unix command cookbook.
+
+======================================================================

@@ -78,10 +78,24 @@ map("n", "<leader>bd", function()
 end, { desc = "Delete buffer (keep window layout)" })
 map("n", "<leader>bo", function()
   local cur = vim.api.nvim_get_current_buf()
+  local failed = {}
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if buf ~= cur and vim.api.nvim_buf_is_loaded(buf) then
-      vim.api.nvim_buf_delete(buf, { force = false })
+    if buf ~= cur and vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
+      local ok, err = pcall(vim.api.nvim_buf_delete, buf, { force = false })
+      if not ok then
+        local name = vim.api.nvim_buf_get_name(buf)
+        if name == "" then name = ("[No Name " .. buf .. "]") end
+        table.insert(failed, vim.fn.fnamemodify(name, ":~:."))
+        if err then
+          vim.schedule(function()
+            vim.notify("Could not close buffer: " .. vim.fn.fnamemodify(name, ":~:."), vim.log.levels.WARN)
+          end)
+        end
+      end
     end
+  end
+  if #failed > 0 then
+    vim.notify("Some buffers were not closed (likely modified): " .. table.concat(failed, ", "), vim.log.levels.WARN)
   end
 end, { desc = "Close all other buffers" })
 map("n", "<leader>bl", "<cmd>ls<cr>", { desc = "List buffers" })
