@@ -120,6 +120,16 @@ map("n", "<S-j>", "J", { desc = "Join line below" })
 map("v", "<", "<gv")
 map("v", ">", ">gv")
 
+-- Keep cursor position when yanking
+map("v", "y", "ygv<esc>", { desc = "Yank and keep selection" })
+
+-- Don't replace register when pasting over selection
+map("x", "p", 'p:let @+=@0<CR>:let @"=@0<CR>', { desc = "Paste without yanking selection" })
+
+-- Delete without yanking (black hole register)
+map({"n", "v"}, "<leader>d", '"_d', { desc = "Delete without yanking" })
+map({"n", "v"}, "<leader>D", '"_D', { desc = "Delete line without yanking" })
+
 -- clear search highlight
 map("n", "<Esc>", "<cmd>nohlsearch<cr>")
 
@@ -184,6 +194,20 @@ map("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, { desc = "Pre
 map("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, { desc = "Next diagnostic" })
 map("n", "<leader>cd", function() vim.diagnostic.open_float() end, { desc = "Line diagnostics" })
 map("n", "<leader>cl", function() vim.diagnostic.setqflist({ open = true }) end, { desc = "List all diagnostics (quickfix)" })
+
+-- quickfix list navigation
+map("n", "<leader>qo", "<cmd>copen<cr>", { desc = "Open quickfix" })
+map("n", "<leader>qc", "<cmd>cclose<cr>", { desc = "Close quickfix" })
+map("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })
+map("n", "[q", "<cmd>cprev<cr>zz", { desc = "Prev quickfix item" })
+map("n", "]Q", "<cmd>clast<cr>zz", { desc = "Last quickfix item" })
+map("n", "[Q", "<cmd>cfirst<cr>zz", { desc = "First quickfix item" })
+
+-- location list navigation
+map("n", "<leader>lo", "<cmd>lopen<cr>", { desc = "Open location list" })
+map("n", "<leader>lc", "<cmd>lclose<cr>", { desc = "Close location list" })
+map("n", "]l", "<cmd>lnext<cr>zz", { desc = "Next location item" })
+map("n", "[l", "<cmd>lprev<cr>zz", { desc = "Prev location item" })
 
 -- git
 map("n", "<leader>gg", function()

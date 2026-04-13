@@ -44,6 +44,7 @@ local pack_ok, pack_err = pcall(vim.pack.add, {
   { src = gh("rafamadriz/friendly-snippets"), version = "6cd7280adead7f586db6fccbd15d2cac7e2188b9" },
   { src = gh("echasnovski/mini.nvim"), version = "a995fe9cd4193fb492b5df69175a351a74b3d36b" },
   { src = gh("nvim-treesitter/nvim-treesitter"), version = "6620ae1c44dfa8623b22d0cbf873a9e8d073b849" },
+  { src = gh("nvim-treesitter/nvim-treesitter-textobjects"), version = "HEAD" },
 }, { confirm = false, load = true })
 if not pack_ok then
   vim.notify(
@@ -106,3 +107,48 @@ vim.api.nvim_create_autocmd("FileType", {
     end
   end,
 })
+
+-- Treesitter text objects configuration
+local ts_textobjects_ok, ts_textobjects = pcall(require, "nvim-treesitter-textobjects")
+if ts_textobjects_ok then
+  ts_textobjects.setup({
+    select = {
+      enable = true,
+      lookahead = true,
+      keymaps = {
+        ["af"] = "@function.outer",
+        ["if"] = "@function.inner",
+        ["ac"] = "@class.outer",
+        ["ic"] = "@class.inner",
+        ["aa"] = "@parameter.outer",
+        ["ia"] = "@parameter.inner",
+        ["ai"] = "@conditional.outer",
+        ["ii"] = "@conditional.inner",
+        ["al"] = "@loop.outer",
+        ["il"] = "@loop.inner",
+      },
+    },
+    move = {
+      enable = true,
+      set_jumps = true,
+      goto_next_start = {
+        ["]f"] = "@function.outer",
+        ["]c"] = "@class.outer",
+        ["]a"] = "@parameter.inner",
+      },
+      goto_next_end = {
+        ["]F"] = "@function.outer",
+        ["]C"] = "@class.outer",
+      },
+      goto_previous_start = {
+        ["[f"] = "@function.outer",
+        ["[c"] = "@class.outer",
+        ["[a"] = "@parameter.inner",
+      },
+      goto_previous_end = {
+        ["[F"] = "@function.outer",
+        ["[C"] = "@class.outer",
+      },
+    },
+  })
+end

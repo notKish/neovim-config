@@ -1,16 +1,176 @@
--- Native AI completion using MiniMax API (no plugins required).
--- <C-a>      — trigger: fires 3 parallel requests, shows first result as virtual text
+-- Generic AI completion with pluggable providers.
+-- <C-a>      — trigger: fires N parallel requests, shows first result as virtual text
 -- <C-Enter>  — accept full current suggestion
 -- <S-Enter>  — accept one line of current suggestion
 -- <C-j>      — cycle to next suggestion
 -- <C-k>      — cycle to previous suggestion
 -- <C-e>      — dismiss
+--
+-- Configuration via vim.g.ai_completion (or set defaults below)
+--
+-- Example for MiniMax:
+--   vim.g.ai_completion = {
+--     provider = "minimax",
+--     num_suggestions = 3,
+--     providers = {
+--       minimax = {
+--         env_key = "MINIMAX_API_KEY",
+--         model = "MiniMax-M2.7",
+--         endpoint = "https://api.minimax.io/anthropic/v1/messages",
+--         max_tokens = 512,
+--       },
+--     },
+--   }
+--
+-- Example for OpenAI:
+--   vim.g.ai_completion = {
+--     provider = "openai",
+--     num_suggestions = 3,
+--     providers = {
+--       openai = {
+--         env_key = "OPENAI_API_KEY",
+--         model = "gpt-4o",
+--         endpoint = "https://api.openai.com/v1/chat/completions",
+--         max_tokens = 512,
+--       },
+--     },
+--   }
 
 local M = {}
-local api_key = vim.env.MINIMAX_API_KEY
-local model = "MiniMax-M2.7"
-local endpoint = "https://api.minimax.io/anthropic/v1/messages"
-local NUM_SUGGESTIONS = 3
+
+-- Default configuration
+local default_config = {
+  provider = "minimax",
+  num_suggestions = 3,
+  providers = {
+    minimax = {
+      env_key = "MINIMAX_API_KEY",
+      model = "MiniMax-M2.7",
+      endpoint = "https://api.minimax.io/anthropic/v1/messages",
+      max_tokens = 512,
+      -- Format request body for MiniMax API
+      format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
+        return vim.json.encode({
+          model = model,
+          max_tokens = max_tokens,
+          temperature = temperature,
+          system = system_prompt,
+          messages = {
+            { role = "user", content = { { type = "text", text = user_prompt } } },
+          },
+        })
+      end,
+      -- Get headers for MiniMax
+      get_headers = function(api_key)
+        return {
+          "-H", "Content-Type: application/json",
+          "-H", "x-api-key: " .. api_key,
+          "-H", "anthropic-version: 2023-06-01",
+        }
+      end,
+      -- Extract completion from MiniMax response
+      extract_completion = function(response)
+        if not response or type(response) ~= "table" then
+          return nil
+        end
+        for _, block in ipairs(response.content or {}) do
+          if block.type == "text" and block.text and block.text ~= "" then
+            return block.text
+          end
+        end
+        return nil
+      end,
+    },
+    openai = {
+      env_key = "OPENAI_API_KEY",
+      model = "gpt-4o",
+      endpoint = "https://api.openai.com/v1/chat/completions",
+      max_tokens = 512,
+      format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
+        return vim.json.encode({
+          model = model,
+          max_tokens = max_tokens,
+          temperature = temperature,
+          messages = {
+            { role = "system", content = system_prompt },
+            { role = "user", content = user_prompt },
+          },
+        })
+      end,
+      get_headers = function(api_key)
+        return {
+          "-H", "Content-Type: application/json",
+          "-H", "Authorization: Bearer " .. api_key,
+        }
+      end,
+      extract_completion = function(response)
+        if not response or type(response) ~= "table" then
+          return nil
+        end
+        local choice = response.choices and response.choices[1]
+        if choice and choice.message and choice.message.content then
+          return choice.message.content
+        end
+        return nil
+      end,
+    },
+    -- Generic Anthropic-compatible provider (for any API following Anthropic's format)
+    anthropic = {
+      env_key = "ANTHROPIC_API_KEY",
+      model = "claude-3-5-sonnet-20241022",
+      endpoint = "https://api.anthropic.com/v1/messages",
+      max_tokens = 512,
+      format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
+        return vim.json.encode({
+          model = model,
+          max_tokens = max_tokens,
+          temperature = temperature,
+          system = system_prompt,
+          messages = {
+            { role = "user", content = user_prompt },
+          },
+        })
+      end,
+      get_headers = function(api_key)
+        return {
+          "-H", "Content-Type: application/json",
+          "-H", "x-api-key: " .. api_key,
+          "-H", "anthropic-version: 2023-06-01",
+        }
+      end,
+      extract_completion = function(response)
+        if not response or type(response) ~= "table" then
+          return nil
+        end
+        for _, block in ipairs(response.content or {}) do
+          if block.type == "text" and block.text and block.text ~= "" then
+            return block.text
+          end
+        end
+        return nil
+      end,
+    },
+  },
+}
+
+-- Get effective configuration
+local function get_config()
+  local user_config = vim.g.ai_completion or {}
+  local config = vim.tbl_deep_extend("force", default_config, user_config)
+  return config
+end
+
+-- Get current provider configuration
+local function get_provider_config(config)
+  local provider_name = config.provider or "minimax"
+  local provider = config.providers and config.providers[provider_name]
+  if not provider then
+    vim.notify("AI provider '" .. provider_name .. "' not found in configuration", vim.log.levels.ERROR)
+    return nil
+  end
+  return provider
+end
+
 local ns = vim.api.nvim_create_namespace("ai_completion")
 
 -- state
@@ -21,9 +181,9 @@ local state = {
   buf = nil,
   row = nil,
   col = nil,
-  accepting_line = false, -- suppress auto-dismiss during line accept
-  session = 0,            -- incremented on each trigger; callbacks check this before mutating
-  accepting = false,      -- true once user starts accepting (locks suggestions list)
+  accepting_line = false,
+  session = 0,
+  accepting = false,
 }
 
 local function get_context()
@@ -40,13 +200,11 @@ end
 local function get_file_context()
   local buf = vim.api.nvim_get_current_buf()
   local filepath = vim.api.nvim_buf_get_name(buf)
-  -- make it relative to cwd if possible
   local cwd = vim.fn.getcwd()
   if filepath:sub(1, #cwd) == cwd then
     filepath = filepath:sub(#cwd + 2)
   end
 
-  -- collect import lines from the top of the file (up to first non-import line)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local imports = {}
   for _, line in ipairs(lines) do
@@ -64,7 +222,6 @@ local function build_prompt(prefix, suffix)
   local ft = vim.bo.filetype
   local filepath, imports = get_file_context()
 
-  -- extract the last non-empty comment line from prefix as an optional instruction
   local instruction = ""
   for _, line in ipairs(vim.split(prefix, "\n", { plain = true })) do
     local comment = line:match("^%s*//+%s*(.+)$")
@@ -105,9 +262,7 @@ local function show_virtual_text(text)
   if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
   local preview = vim.split(strip(text), "\n", { plain = true })
-  -- first line inline after cursor
   local inline = { { " " .. preview[1], "Comment" } }
-  -- remaining lines as virtual lines below
   local virt_lines = {}
   for i = 2, #preview do
     table.insert(virt_lines, { { preview[i], "Comment" } })
@@ -158,12 +313,8 @@ local function auto_import()
         return
       end
       if not actions or #actions == 0 then
-        vim.notify("auto_import: no actions returned", vim.log.levels.WARN)
         return
       end
-      vim.notify(
-      "auto_import: " .. #actions .. " action(s): " .. vim.inspect(vim.tbl_map(function(a) return a.title end, actions)),
-        vim.log.levels.INFO)
       local client = vim.lsp.get_client_by_id(ctx.client_id)
       if not client then return end
       for _, action in ipairs(actions) do
@@ -180,7 +331,6 @@ local function auto_import()
     end)
   end
 
-  -- ts_ls needs ~500ms to process newly inserted text and produce diagnostics
   vim.defer_fn(request_imports, 500)
 end
 
@@ -190,7 +340,7 @@ local function dismiss()
   state.accepting = false
   state.suggestions = {}
   state.index = 1
-  state.session = state.session + 1 -- invalidate any in-flight callbacks
+  state.session = state.session + 1
 end
 
 local function show_current()
@@ -223,18 +373,14 @@ local function accept_line()
   state.accepting = true
   state.accepting_line = true
 
-  -- figure out indentation of the next suggestion line (or current line if last)
   local next_line = lines[2] or line
   local indent = next_line:match("^(%s*)") or ""
 
-  -- insert the line + newline with indentation
   vim.api.nvim_buf_set_text(state.buf, state.row - 1, state.col, state.row - 1, state.col, { line, indent })
-  -- cursor moves to end of indentation on the new line
   state.row = state.row + 1
   state.col = #indent
   vim.api.nvim_win_set_cursor(0, { state.row, state.col })
 
-  -- remove the accepted line from the suggestion
   table.remove(lines, 1)
   if #lines == 0 then
     state.accepting_line = false
@@ -259,26 +405,29 @@ local function cycle(dir)
   )
 end
 
-local function fetch_suggestion(prompt, temperature, on_result)
-  local body = vim.json.encode({
-    model = model,
-    max_tokens = 512,
-    temperature = temperature,
-    system =
-    "You are a code completion engine. Only output the completion text itself, no explanation, no markdown fences.",
-    messages = {
-      { role = "user", content = { { type = "text", text = prompt } } },
-    },
-  })
+local function fetch_suggestion(prompt, temperature, provider, on_result)
+  local api_key = vim.env[provider.env_key]
+  if not api_key or api_key == "" then
+    vim.notify("API key not set: " .. provider.env_key, vim.log.levels.ERROR)
+    on_result(nil)
+    return
+  end
+
+  local system_prompt = "You are a code completion engine. Only output the completion text itself, no explanation, no markdown fences."
+  local body = provider.format_body(provider.model, provider.max_tokens, temperature, system_prompt, prompt)
+  local headers = provider.get_headers(api_key)
+
+  local curl_args = {
+    "curl", "-s", "-X", "POST", provider.endpoint,
+  }
+  for _, h in ipairs(headers) do
+    table.insert(curl_args, h)
+  end
+  table.insert(curl_args, "-d")
+  table.insert(curl_args, body)
 
   vim.system(
-    {
-      "curl", "-s", "-X", "POST", endpoint,
-      "-H", "Content-Type: application/json",
-      "-H", "x-api-key: " .. api_key,
-      "-H", "anthropic-version: 2023-06-01",
-      "-d", body,
-    },
+    curl_args,
     { text = true },
     vim.schedule_wrap(function(result)
       if result.code ~= 0 then
@@ -290,20 +439,20 @@ local function fetch_suggestion(prompt, temperature, on_result)
         on_result(nil)
         return
       end
-      for _, block in ipairs(response.content or {}) do
-        if block.type == "text" and block.text ~= "" then
-          on_result(block.text)
-          return
-        end
-      end
-      on_result(nil)
+      local completion = provider.extract_completion(response)
+      on_result(completion)
     end)
   )
 end
 
 function M.complete()
+  local config = get_config()
+  local provider = get_provider_config(config)
+  if not provider then return end
+
+  local api_key = vim.env[provider.env_key]
   if not api_key or api_key == "" then
-    vim.notify("MINIMAX_API_KEY is not set", vim.log.levels.ERROR)
+    vim.notify("AI API key not set: " .. provider.env_key, vim.log.levels.ERROR)
     return
   end
 
@@ -318,25 +467,24 @@ function M.complete()
   local session = state.session
 
   local prefix, suffix = get_context()
-  local prompt = build_prompt(prefix, suffix)
+  local user_prompt = build_prompt(prefix, suffix)
+  local num_suggestions = config.num_suggestions or 3
   local temperatures = { 0.2, 0.5, 0.8 }
   local done = 0
 
   vim.notify("AI completing…", vim.log.levels.INFO)
 
-  for i = 1, NUM_SUGGESTIONS do
-    fetch_suggestion(prompt, temperatures[i], function(text)
-      -- discard if a new trigger fired or user already started accepting
+  for i = 1, num_suggestions do
+    fetch_suggestion(user_prompt, temperatures[i], provider, function(text)
       if state.session ~= session or state.accepting then return end
       done = done + 1
       if text then
         table.insert(state.suggestions, text)
-        -- show virtual text as soon as first result arrives
         if #state.suggestions == 1 then
           show_current()
         end
       end
-      if done == NUM_SUGGESTIONS then
+      if done == num_suggestions then
         if #state.suggestions == 0 then
           vim.notify("AI returned no completions", vim.log.levels.WARN)
           state.active = false
@@ -351,8 +499,13 @@ function M.complete()
   end
 end
 
--- keymaps (insert mode only, active when suggestion is showing)
-vim.keymap.set("i", "<C-a>", function() M.complete() end, { desc = "AI complete (MiniMax)" })
+-- Setup function to configure the module
+function M.setup(user_config)
+  vim.g.ai_completion = vim.tbl_deep_extend("force", default_config, user_config or {})
+end
+
+-- keymaps
+vim.keymap.set("i", "<C-a>", function() M.complete() end, { desc = "AI complete" })
 
 vim.keymap.set("i", "<C-CR>", function()
   if state.active then accept_full() end
@@ -378,7 +531,7 @@ vim.keymap.set("i", "<C-e>", function()
   end
 end, { desc = "AI dismiss / close completion menu" })
 
--- auto-dismiss if cursor moves or mode changes (but not during line accept)
+-- auto-dismiss if cursor moves or mode changes
 vim.api.nvim_create_autocmd("CursorMovedI", {
   callback = function()
     if state.active and not state.accepting_line then dismiss() end

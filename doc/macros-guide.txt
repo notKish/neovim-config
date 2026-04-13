@@ -1,0 +1,253 @@
+================================================================================
+                        VIM MACROS GUIDE
+                    Recording and Playback
+================================================================================
+
+1. WHAT ARE MACROS?
+
+A macro records a sequence of keystrokes that can be replayed later. Think of
+it as teaching Vim to automate repetitive edits.
+
+Use macros when:
+- You need to perform the same edit on multiple lines
+- You want to transform text in a predictable pattern
+- A task is too complex for :substitute but too tedious to do manually
+- You need to make decisions (like "skip this line") during repetitive work
+
+================================================================================
+
+2. BASIC WORKFLOW
+
+Recording a macro:
+  qa       Start recording into register 'a'
+  (do your edits)
+  q        Stop recording
+
+Playing a macro:
+  @a       Execute macro from register 'a'
+  @@       Re-execute last played macro
+  5@a      Execute macro 'a' 5 times
+
+Registers a-z are available. Use uppercase (A-Z) to append to existing macro.
+
+================================================================================
+
+3. PRACTICAL EXAMPLES
+
+Example 1: Quote all words in a line
+  Original: one two three four
+  Goal: "one" "two" "three" "four"
+
+  qa           Start recording
+  ^            Go to start of line
+  i"<Esc>      Insert opening quote
+  e            Go to end of word
+  a"<Esc>      Insert closing quote
+  w            Go to next word
+  q            Stop recording
+
+  @a           Test on current line
+  10@a         Run on 10 more lines (or use visual mode + :normal @a)
+
+Example 2: Format CSV to JSON-like structure
+  Original: John,Doe,30,Engineer
+
+  qa           Start recording
+  ^            Start of line
+  i"<Esc>      Opening quote
+  f,a"<Esc>    Find comma, add quote after
+  f,a"<Esc>    Find next comma, add quote after
+  ...          Repeat for each field
+  A"<Esc>      Closing quote at end
+  q            Stop
+
+Example 3: Numbered list with incrementing values
+  Start with: item
+             item
+             item
+
+  :let i = 1 | g/^item/s//\=i.'. item'/ | let i = i + 1
+
+  Or with macro (more flexible for complex formatting):
+  qa
+  ^           Start of line
+  i<C-r>=line('.')<Esc>. <Esc>  Insert line number
+  q
+
+================================================================================
+
+4. ADVANCED TECHNIQUES
+
+Moving to the next target automatically:
+  Add `j` or `+` at the end of your macro to move to next line
+  Or add `/pattern<CR>` to search for next occurrence
+
+Conditional execution with search:
+  If your search fails, macro stops - use this to process until end of file
+
+  Example: Process lines containing TODO
+    /TODO<CR>qa...q1000@a
+    - Searches for TODO, records edit, then runs 1000 times
+    - Macro stops when /TODO fails (no more matches)
+
+Using visual mode with macros:
+  Select range, then :normal @a to run macro on each line
+
+Recursive macros (macro calls itself):
+  Record with: qa...@aq
+  Then run once with @a - it will keep calling itself until it fails
+
+================================================================================
+
+5. WORKING WITH REGISTERS
+
+View macro contents:
+  :reg a       Show what's in register 'a'
+  "ap          Paste macro as text (to edit or debug)
+
+Edit a macro:
+  "ap          Paste it
+  (edit the keystrokes as text)
+  "ayy         Yank back into register
+
+Copy between registers:
+  :let @b = @a    Copy macro 'a' to 'b'
+
+Clear a register:
+  qaq             Record nothing, stops immediately
+  :let @a = ''    Clear register 'a'
+
+Appending to macros:
+  qA           (capital A) continues recording where 'a' left off
+
+================================================================================
+
+6. COMMON PITFALLS AND SOLUTIONS
+
+Problem: Macro works on first line but fails on others
+Cause: Cursor position matters - use ^ (start) or 0 (column 0) consistently
+
+Problem: Macro stops unexpectedly
+Cause: Search inside macro failed, or motion couldn't find target
+Solution: Use guaranteed motions (^, $, w, b) or add error tolerance
+
+Problem: Recording stops when I press q
+Cause: You might have a mapping that shadows q
+Solution: Use ctrl-q instead, or check :nmap q
+
+Problem: Macro runs too slow on many lines
+Solution: Use :set lazyredraw (restore with :set nolazyredraw after)
+
+Problem: Character encoding issues in pasted macros
+Solution: Ensure 'encoding' is set correctly (usually utf-8)
+
+================================================================================
+
+7. TIPS AND TRICKS
+
+Tip 1: Use . wisely
+  If your macro ends with a repeatable edit, you can use @a then 999.
+  to continue the pattern (sometimes faster than 1000@a)
+
+Tip 2: Start with a clean slate
+  Use gg to go to line 1 before starting macro recording
+  This ensures consistent behavior regardless of where you started
+
+Tip 3: Use marks for complex navigation
+  ma (set mark), later `a (jump to mark)
+  Useful when you need to visit multiple places in the file
+
+Tip 4: Combine with :g (global command)
+  :g/pattern/normal @a runs macro on all matching lines
+
+Tip 5: Use @@ for rapid repeat
+  @a runs macro a
+  @@ runs last macro again
+  Keep pressing @@ or do 100@@
+
+Tip 6: Record in insert mode when needed
+  i<Tab><Tab>text<Esc> records actual insertions
+
+Tip 7: Use ctrl-a/ctrl-x for numbers
+  5<C-a> increments number under cursor by 5
+  Great for numbered lists in macros
+
+Tip 8: Debug by stepping through
+  Use :set showcmd to see partial commands
+  Or paste macro with "ap to inspect keystrokes
+
+================================================================================
+
+8. WORKFLOW PATTERNS
+
+Pattern 1: Record → Test → Iterate
+  1. Record rough version
+  2. Test on one line
+  3. If broken, edit macro or re-record
+  4. When working, run on all lines
+
+Pattern 2: Visual mode selection
+  1. Select range with V or ctrl-v
+  2. :normal @a
+  3. Macro runs on each selected line
+
+Pattern 3: Global + Macro
+  1. :g/pattern/normal @a
+  2. Processes only matching lines
+
+Pattern 4: Macro chaining
+  1. Record macro a for initial edit
+  2. Record macro b for follow-up
+  3. Run :g/pattern/normal @a@b
+
+================================================================================
+
+9. REAL-WORLD SCENARIOS
+
+Refactoring variable names:
+  /old_var<CR>ce$new_var<Esc>n.q
+  Then 100@a to change all
+
+Formatting log entries:
+  qa^i[<Esc>f]a]<Esc>0w~q
+  Capitalizes first word and brackets timestamps
+
+Creating HTML from plain text:
+  qaI<p><Esc>A</p><Esc>jq
+  Wraps each line in paragraph tags
+
+Data transformation:
+  qa^3dw3dwA, <Esc>pjq
+  Moves columns 3 and 4 to end with comma separator
+
+================================================================================
+
+10. COMMAND REFERENCE
+
+Recording:
+  q{0-9a-zA-Z}    Start recording into register
+  q               Stop recording
+
+Playback:
+  @{0-9a-zA-Z}    Execute register contents
+  @@              Re-execute last @{reg}
+  {count}@{reg}   Execute {count} times
+
+Registers:
+  :reg {regs}     Show register contents
+  "{reg}y         Yank into register
+  "{reg}p         Paste from register
+  :let @{reg} = ''   Clear register
+  q{Reg}          Append to register (uppercase)
+
+With normal command:
+  :[range]normal @{reg}   Execute macro on range
+  :g/pattern/normal @{reg}   Execute where pattern matches
+
+================================================================================
+
+Remember: Start simple. Record, test on one line, then scale up.
+Complex macros are built from simple, tested components.
+
+================================================================================
+vim:ft=help:tw=80

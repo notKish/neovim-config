@@ -293,4 +293,23 @@ vim.lsp.config("bashls", {
   root_markers = { ".git", "package.json" },
 })
 
-vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "ruff", "clangd", "jdtls", "bashls" })
+vim.lsp.config("gopls", {
+  cmd = { "gopls" },
+  filetypes = { "go", "gomod", "gowork", "gotmpl" },
+  capabilities = lsp_capabilities,
+  settings = {
+    gopls = {
+      analyses = { unusedparams = true, shadow = true },
+      staticcheck = true,
+      gofumpt = true,
+    },
+  },
+})
+
+vim.lsp.config("nil_ls", {
+  cmd = { "nil" },
+  filetypes = { "nix" },
+  capabilities = lsp_capabilities,
+})
+
+vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "ruff", "clangd", "jdtls", "bashls", "gopls", "nil_ls" })
