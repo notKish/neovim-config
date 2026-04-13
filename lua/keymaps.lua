@@ -152,6 +152,7 @@ end, { desc = "Rename current file" })
 map("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, { desc = "Prev diagnostic" })
 map("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, { desc = "Next diagnostic" })
 map("n", "<leader>cd", function() vim.diagnostic.open_float() end, { desc = "Line diagnostics" })
+map("n", "<leader>cl", function() vim.diagnostic.setqflist({ open = true }) end, { desc = "List all diagnostics (quickfix)" })
 
 -- git
 map("n", "<leader>gg", function()
