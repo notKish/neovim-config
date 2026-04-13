@@ -239,7 +239,14 @@ vim.lsp.config("ruff", {
 })
 
 vim.lsp.config("clangd", {
-  cmd = { "clangd" },
+  cmd = {
+    "clangd",
+    "--background-index",
+    "--completion-style=detailed",
+    "--header-insertion=iwyu",
+    "--pch-storage=memory",
+    "--cross-file-rename",
+  },
   filetypes = { "c", "cpp", "objc", "objcpp" },
   capabilities = lsp_capabilities,
 })

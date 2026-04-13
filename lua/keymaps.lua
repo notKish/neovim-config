@@ -148,6 +148,37 @@ map("n", "<leader>rn", function()
   end
 end, { desc = "Rename current file" })
 
+-- man page for word under cursor (tries section 3 first for C functions)
+map("n", "<leader>m", function()
+  local word = vim.fn.expand("<cword>")
+  -- Try man -w to check if page exists in section 3 (library functions)
+  local found = vim.fn.system("man -w 3 " .. word .. " 2>/dev/null")
+  if found and found ~= "" then
+    vim.cmd("Man 3 " .. word)
+    return
+  end
+  -- Try section 2 (system calls)
+  found = vim.fn.system("man -w 2 " .. word .. " 2>/dev/null")
+  if found and found ~= "" then
+    vim.cmd("Man 2 " .. word)
+    return
+  end
+  -- Fallback to any section
+  found = vim.fn.system("man -w " .. word .. " 2>/dev/null")
+  if found and found ~= "" then
+    vim.cmd("Man " .. word)
+    return
+  end
+  vim.notify("No manual entry for " .. word .. ". Try <leader>M for online docs.", vim.log.levels.WARN)
+end, { desc = "Man page for word under cursor" })
+
+-- open online man page (Linux man pages online)
+map("n", "<leader>M", function()
+  local word = vim.fn.expand("<cword>")
+  local url = "https://man7.org/linux/man-pages/man3/" .. word .. ".3.html"
+  vim.fn.system("open " .. vim.fn.shellescape(url))
+end, { desc = "Open online man page (man7.org)" })
+
 -- diagnostics
 map("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, { desc = "Prev diagnostic" })
 map("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, { desc = "Next diagnostic" })
