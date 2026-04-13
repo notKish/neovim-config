@@ -245,7 +245,13 @@ vim.lsp.config("clangd", {
 })
 
 vim.lsp.config("jdtls", {
-  cmd = { "jdtls" },
+  cmd = {
+    "jdtls",
+    "--jvm-arg=-Xms2G",
+    "--jvm-arg=-Xmx4G",
+    "--jvm-arg=-XX:+UseG1GC",
+    "--jvm-arg=-XX:+UseStringDeduplication",
+  },
   filetypes = { "java" },
   capabilities = lsp_capabilities,
   settings = {
@@ -255,9 +261,29 @@ vim.lsp.config("jdtls", {
       implementationsCodeLens = { enabled = true },
       referencesCodeLens = { enabled = true },
       format = { enabled = true },
+      imports = {
+        gradle = { enabled = true },
+        maven = { enabled = true },
+      },
+      configuration = {
+        updateBuildConfiguration = "automatic",
+      },
     },
   },
-  root_markers = { "pom.xml", "build.gradle", ".git" },
+  root_markers = { "pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", ".git" },
 })
 
-vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "ruff", "clangd", "jdtls" })
+vim.lsp.config("bashls", {
+  cmd = { "bash-language-server", "start" },
+  filetypes = { "sh", "bash", "zsh" },
+  capabilities = lsp_capabilities,
+  settings = {
+    bashIde = {
+      shellcheckPath = "shellcheck",
+      globPattern = "*@(.sh|.inc|.bash|.zsh|.command)",
+    },
+  },
+  root_markers = { ".git", "package.json" },
+})
+
+vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "ruff", "clangd", "jdtls", "bashls" })

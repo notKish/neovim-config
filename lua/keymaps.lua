@@ -99,25 +99,15 @@ map("n", "<leader>bo", function()
   end
 end, { desc = "Close all other buffers" })
 map("n", "<leader>bl", "<cmd>ls<cr>", { desc = "List buffers" })
-map("n", "<leader>bb", function()
-  local bufs = vim.tbl_filter(function(b)
-    return vim.api.nvim_buf_is_loaded(b) and vim.api.nvim_buf_get_name(b) ~= ""
-  end, vim.api.nvim_list_bufs())
-  local names = vim.tbl_map(function(b)
-    local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ":~:.")
-    local modified = vim.api.nvim_get_option_value("modified", { buf = b }) and " [+]" or ""
-    return name .. modified
-  end, bufs)
-  vim.ui.select(names, { prompt = "Switch buffer:" }, function(_, idx)
-    if idx then vim.api.nvim_set_current_buf(bufs[idx]) end
-  end)
-end, { desc = "Pick buffer" })
+map("n", "<leader>bb", function() MiniPick.builtin.buffers() end, { desc = "Pick buffer" })
 
--- pickers: vim.ui + rg (no Telescope; :h vim.ui)
-map("n", "<leader><space>", function() require("search").find_files() end, { desc = "Find files" })
-map("n", "<leader>?", function() require("search").live_grep() end, { desc = "Live grep" })
-map("n", "<leader>fw", function() require("search").grep_word() end, { desc = "Grep word under cursor" })
-map("n", "<leader>fh", function() require("search").help_tags() end, { desc = "Help tags" })
+-- pickers: mini.pick (fuzzy finder UI)
+map("n", "<leader><space>", function() MiniPick.builtin.files() end, { desc = "Find files" })
+map("n", "<leader>?", function() MiniPick.builtin.grep_live() end, { desc = "Live grep" })
+map("n", "<leader>fw", function() MiniPick.builtin.grep({ pattern = vim.fn.expand("<cword>") }) end, { desc = "Grep word under cursor" })
+map("n", "<leader>fh", function() MiniPick.builtin.help() end, { desc = "Help tags" })
+map("n", "<leader>fb", function() MiniPick.builtin.buffers() end, { desc = "Find buffers" })
+map("n", "<leader>fg", function() MiniPick.builtin.git_files() end, { desc = "Find git files" })
 
 -- move lines (visual only)
 map("v", "<S-j>", ":m '>+1<cr>gv=gv", { desc = "Move selection down" })

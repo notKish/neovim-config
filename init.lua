@@ -28,3 +28,5 @@ end
 require("ai")
 require("statusline")
 require("terminal")
+-- mini.pick for file finder UI (replaces vim.ui.select with fuzzy picker)
+require("pick_pack")
