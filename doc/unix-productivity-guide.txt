@@ -196,10 +196,349 @@ SAFETY + ERGONOMICS                                     *unix-productivity-safet
   Tip: run filters on visual selection first, then full buffer.
 
 ======================================================================
+TEXT TRANSFORMATION                                      *unix-productivity-text*
+======================================================================
+
+  Reverse lines/characters:
+
+  :%!tac
+      Reverse line order (last line becomes first).
+
+  :%!rev
+      Reverse each line's characters (abc -> cba).
+
+  :'<,'>!tr 'a-zA-Z' 'A-Za-z'
+      Toggle case (upper <-> lower).
+
+  Number lines:
+
+  :%!nl -ba
+      Add line numbers (including blank lines).
+
+  :%!nl -n rz -w 3
+      Zero-padded line numbers (001, 002, ...).
+
+  Shuffle/randomize:
+
+  :%!sort -R
+      Randomize line order (portable, works on macOS/Linux).
+
+  :'<,'>!sort -R | head -n 5
+      Pick 5 random lines from selection.
+
+  Note: GNU/Linux has 'shuf' which is faster. On macOS, install coreutils:
+      brew install coreutils
+  Then use 'gshuf' for better performance.
+
+  Deduplicate adjacent lines:
+
+  :%!uniq
+      Remove duplicate adjacent lines.
+
+  :%!uniq -c
+      Show count of duplicate adjacent lines.
+
+  :%!uniq -d
+      Show only lines that have duplicates.
+
+======================================================================
+DATA FORMATTING                                          *unix-productivity-data*
+======================================================================
+
+  Format into columns:
+
+  :%!column -t
+      Auto-format text into aligned columns.
+
+  :%!column -t -s,
+      Format CSV into aligned columns.
+
+  :%!column -t -s: -o"  "
+      Format colon-separated data with 2-space separator.
+
+  Merge lines side-by-side:
+
+  :%!paste -d, - -
+      Join pairs of lines with comma (line1,line2\nline3,line4).
+
+  :%!paste -sd+ -
+      Join all lines with + (for math expressions).
+
+  Join files on common field:
+
+  :read !join -t, file1.csv file2.csv
+      Join two CSV files on first field.
+
+======================================================================
+JSON PROCESSING                                          *unix-productivity-json*
+======================================================================
+
+  Pretty print JSON:
+
+  :%!jq .
+      Format JSON with indentation.
+
+  :%!jq -c
+      Compact JSON (single line).
+
+  :%!jq -S
+      Sort keys alphabetically.
+
+  Extract fields:
+
+  :%!jq '.name'
+      Extract "name" field from JSON objects.
+
+  :%!jq '.items[] | .title'
+      Extract title from each item in items array.
+
+  Transform JSON:
+
+  :%!jq 'map(.name)'
+      Extract just names from array of objects.
+
+  :%!jq '.[] | {id: .id, title: .title}'
+      Select only id and title fields.
+
+  Filter JSON:
+
+  :%!jq '.[] | select(.status == "active")'
+      Filter array for active items only.
+
+  :%!jq '. | select(.count > 10)'
+      Filter objects with count > 10.
+
+  Slurp raw strings:
+
+  :%!jq -R -s -c 'split("\\n")'
+      Convert lines to JSON array.
+
+======================================================================
+DATE AND TIME                                            *unix-productivity-time*
+======================================================================
+
+  Insert timestamps:
+
+  :read !date
+      Insert current date/time in default format.
+
+  :read !date "+%Y-%m-%d %H:%M:%S"
+      Insert timestamp: 2024-01-15 14:30:45.
+
+  :read !date "+%s"
+      Insert Unix epoch timestamp.
+
+  :read !date -r 1705331445
+      Convert epoch to readable date (macOS: date -r@...).
+
+  Format dates in text:
+
+  :%!date -f -
+      Convert input lines to formatted dates (from stdin).
+
+  Relative time:
+
+  :read !date -d "yesterday" "+%Y-%m-%d"
+      Yesterday's date.
+
+  :read !date -d "+7 days" "+%Y-%m-%d"
+      Date 7 days from now.
+
+======================================================================
+DIFF AND COMPARE                                         *unix-productivity-diff*
+======================================================================
+
+  Compare with another file:
+
+  :read !diff -u % other.txt
+      Unified diff of current file vs other.txt.
+
+  :read !diff -u <(sort %) <(sort other.txt)
+      Compare sorted versions.
+
+  Side-by-side diff:
+
+  :read !diff -y % other.txt
+      Side-by-side comparison.
+
+  Word-level diff:
+
+  :read !wdiff % other.txt
+      Highlight word-level differences.
+
+  Find common lines:
+
+  :read !comm -12 <(sort %) <(sort other.txt)
+      Lines common to both files.
+
+  Find unique lines:
+
+  :read !comm -23 <(sort %) <(sort other.txt)
+      Lines only in current file.
+
+  Generate patch:
+
+  :read !diff -u original.txt % > fix.patch
+      Save diff as patch file.
+
+  Apply patch:
+
+  :!patch -p1 < fix.patch
+      Apply patch to working directory.
+
+======================================================================
+ENCODING AND ENCRYPTION                                  *unix-productivity-encode*
+======================================================================
+
+  Base64 encode/decode:
+
+  :'<,'>!base64
+      Base64 encode selection.
+
+  :'<,'>!base64 -d
+      Base64 decode selection.
+
+  URL encoding:
+
+  :%!python3 -c "import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))"
+      URL-encode text.
+
+  :%!python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))"
+      URL-decode text.
+
+  Calculate checksums:
+
+  :%write !md5sum
+      Calculate MD5 hash of buffer.
+
+  :%write !sha256sum
+      Calculate SHA256 hash.
+
+  :%write !shasum -a 256
+      macOS SHA256 hash.
+
+  Generate UUID:
+
+  :read !uuidgen
+      Insert UUID (macOS/BSD).
+
+  :read !cat /proc/sys/kernel/random/uuid
+      Linux UUID from kernel.
+
+======================================================================
+ADVANCED RECIPES                                         *unix-productivity-recipes*
+======================================================================
+
+  Extract IPs from log:
+
+  :%!grep -oE '\b[0-9]{1,3}(\.[0-9]{1,3}){3}\b' | sort -u
+      Find and deduplicate IP addresses.
+
+  Word frequency analysis:
+
+  :%!tr '[:space:]' '\n' | sort | uniq -c | sort -nr | head -20
+      Most common words in text.
+
+  Character frequency:
+
+  :%!fold -w1 | sort | uniq -c | sort -nr
+      Count each character occurrence.
+
+  Generate Markdown table of contents:
+
+  :%!grep -n "^##" | sed 's/^##* /  /; s/^/| /; s/:/ | /'
+      Simple TOC from headers.
+
+  Strip ANSI colors:
+
+  :%!sed 's/\x1b\[[0-9;]*m//g'
+      Remove color codes from terminal output.
+
+  Hex dump view:
+
+  :%!xxd
+      View buffer as hex dump.
+
+  :%!xxd -r
+      Convert hex dump back to binary.
+
+  Calculate expression:
+
+  :%!bc
+      Pass math expression to bc calculator.
+
+  :read !echo "1+2+3" | bc
+      Calculate and insert result.
+
+  Format as table from output:
+
+  :read !ps aux | head -10 | column -t
+      Insert process list as formatted table.
+
+  Convert markdown to HTML (if pandoc installed):
+
+  :%!pandoc -f markdown -t html
+      Convert buffer to HTML.
+
+  QR code generation (if qrencode installed):
+
+  :read !qrencode -t ANSIUTF8 "$(cat %)"
+      Generate QR code for buffer content.
+
+======================================================================
+STREAM EDITING WITH TEE                                  *unix-productivity-tee*
+======================================================================
+
+  Tee splits output to file and stdout:
+
+  :%!tee /tmp/backup.txt
+      Filter buffer AND save original to file.
+
+  :%!tee >(wc -l >&2) | sort
+      Show line count in messages, sort output.
+
+  Append to file while processing:
+
+  :%!tee -a /tmp/log.txt | sort -u
+      Append to log, show sorted unique in buffer.
+
+======================================================================
+PARALLEL PROCESSING                                      *unix-productivity-parallel*
+======================================================================
+
+  If GNU Parallel is installed:
+
+  :%!parallel --pipe -j4 sort
+      Parallel sort using 4 cores.
+
+  :%!parallel --pipe -j4 "tr '[:lower:]' '[:upper:]'"
+      Parallel text transformation.
+
+  Process lines in parallel:
+
+  :%!parallel -k echo {}
+      Echo each line (example pattern).
+
+======================================================================
 RELATED GUIDES
 ======================================================================
 
   :help awk-underrated-unix-guide
       Practical awk recipes + underrated Unix command cookbook.
+
+  :help sed-guide
+      Stream editing patterns and transformations.
+
+  :help find-xargs-guide
+      File discovery and batch processing.
+
+  :help gzip-guide
+      File compression with gzip.
+
+  :help tar-guide
+      Archiving and backup operations.
+
+  :help netcat-guide
+      Network debugging and testing.
 
 ======================================================================

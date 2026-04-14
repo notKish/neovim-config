@@ -1,0 +1,391 @@
+================================================================================
+                          TAR GUIDE
+                 The Tape Archive Command
+================================================================================
+
+1. WHAT IS TAR?
+
+Tar (Tape Archive) creates and extracts archive files. It bundles multiple
+files/directories into a single file while preserving permissions, ownership,
+and directory structure.
+
+Key uses:
+- Backing up files and directories
+- Distributing software
+- Preserving file attributes
+- Compressing collections of files
+
+================================================================================
+
+2. BASIC SYNTAX
+
+    tar [options] [archive] [files/directories]
+
+Common operation modes:
+    -c    Create a new archive
+    -x    Extract from archive
+    -t    List contents
+    -r    Append files to archive
+    -u    Update (append only newer files)
+
+================================================================================
+
+3. COMMON OPERATIONS
+
+3.1 CREATE ARCHIVES
+
+Create uncompressed archive:
+    tar -cvf archive.tar directory/
+    tar -cvf archive.tar file1 file2 file3
+
+    -c  create
+    -v  verbose (show files)
+    -f  file (specify archive name)
+
+Create from multiple directories:
+    tar -cvf backup.tar ~/documents ~/pictures ~/code
+
+3.2 EXTRACT ARCHIVES
+
+Extract to current directory:
+    tar -xvf archive.tar
+
+Extract to specific directory:
+    tar -xvf archive.tar -C /path/to/destination
+
+Extract specific files:
+    tar -xvf archive.tar path/inside/archive/file.txt
+
+Extract single file:
+    tar -xvf archive.tar --wildcards "*.jpg"
+
+3.3 LIST CONTENTS
+
+List all files:
+    tar -tvf archive.tar
+
+List with details (permissions, owner, size):
+    tar -tvf archive.tar | less
+
+Find specific file:
+    tar -tvf archive.tar | grep filename
+
+List without extracting:
+    tar -tf archive.tar | wc -l    Count files
+
+================================================================================
+
+4. COMPRESSION
+
+4.1 MODERN STYLE (AUTO-DETECT)
+
+Create .tar.gz (gzip):
+    tar -czvf archive.tar.gz directory/
+
+Create .tar.bz2 (bzip2):
+    tar -cjvf archive.tar.bz2 directory/
+
+Create .tar.xz (xz):
+    tar -cJvf archive.tar.xz directory/
+
+Extract (auto-detect compression):
+    tar -xvf archive.tar.gz
+    tar -xvf archive.tar.bz2
+    tar -xvf archive.tar.xz
+
+4.2 COMPRESSION OPTIONS
+
+    -z  gzip compression (.gz)
+    -j  bzip2 compression (.bz2)
+    -J  xz compression (.xz)
+    -Z  compress (.Z) - legacy
+
+4.3 COMPRESSION LEVELS
+
+Best compression (slower):
+    tar -cJvf archive.tar.xz --xz -9 directory/
+
+Fast compression:
+    tar -czvf archive.tar.gz --gzip -1 directory/
+
+4.4 COMPRESSION COMPARISON
+
+Format    Speed      Compression    Use Case
+----      -----      -----------    --------
+.gz       Fast       Good           General use
+.bz2      Medium     Better         Text files
+.xz       Slow       Best           Long-term storage
+
+================================================================================
+
+5. ADVANCED FEATURES
+
+5.1 PRESERVE/RESTORE ATTRIBUTES
+
+Preserve permissions:
+    tar -cvf archive.tar --preserve-permissions directory/
+
+Preserve ACLs (Access Control Lists):
+    tar -cvf archive.tar --acls --xattrs directory/
+
+Restore all attributes:
+    tar -xvfp archive.tar
+
+    -p  preserve permissions (when extracting)
+
+5.2 EXCLUDE FILES
+
+Exclude patterns:
+    tar -czvf backup.tar.gz --exclude='*.tmp' --exclude='*.log' directory/
+
+Exclude directory:
+    tar -czvf backup.tar.gz --exclude='node_modules' project/
+
+Exclude multiple via file:
+    echo '*.git' > exclude.txt
+    echo '*.pyc' >> exclude.txt
+    tar -czvf backup.tar.gz -X exclude.txt project/
+
+5.3 INCREMENTAL BACKUPS
+
+Create snapshot-based backup:
+    tar -czvf backup-$(date +%Y%m%d).tar.gz \
+        --listed-incremental=snapshot.snar \
+        directory/
+
+Update backup (only changed files):
+    tar -czvf backup-$(date +%Y%m%d).tar.gz \
+        --listed-incremental=snapshot.snar \
+        directory/
+
+5.4 VERIFY INTEGRITY
+
+Test archive without extracting:
+    tar -tvf archive.tar.gz > /dev/null
+
+Extract with verification:
+    tar -xvf archive.tar.gz --verify
+
+Check for corruption:
+    tar -tzf archive.tar.gz >/dev/null && echo "Valid" || echo "Corrupt"
+
+5.5 SPLIT ARCHIVES
+
+Create multi-volume archive:
+    tar -cvf - directory/ | split -b 100M - archive.tar.part-
+
+Recombine and extract:
+    cat archive.tar.part-* | tar -xvf -
+
+Create with size limit:
+    tar -cM -f archive.tar -L 1048576 directory/
+
+================================================================================
+
+6. WORKING WITH PATHS
+
+6.1 RELATIVE VS ABSOLUTE
+
+Create with relative paths (recommended):
+    cd /home/user && tar -czvf backup.tar.gz documents/
+
+Strip leading components on extract:
+    tar -xvf archive.tar.gz --strip-components=1
+
+    Original: home/user/documents/file.txt
+    After:    documents/file.txt
+
+Strip 2 levels:
+    tar -xvf archive.tar.gz --strip-components=2
+
+    Original: home/user/documents/file.txt
+    After:    file.txt
+
+6.2 TRANSFORM PATHS
+
+Rename paths during extraction:
+    tar -xvf archive.tar.gz --transform 's/oldname/newname/'
+
+Prepend directory:
+    tar -xvf archive.tar.gz --transform 's,^,extracted/,'
+
+================================================================================
+
+7. PRACTICAL EXAMPLES
+
+7.1 BACKUP SCENARIOS
+
+Full system backup (exclude proc/sys):
+    tar -czvf backup.tar.gz \
+        --exclude=/proc \
+        --exclude=/sys \
+        --exclude=/dev \
+        --exclude=/tmp \
+        --exclude=/run \
+        --exclude=/mnt \
+        --exclude=/media \
+        --exclude=/lost+found \
+        /
+
+Home directory backup:
+    tar -czvf home-backup-$(date +%Y%m%d).tar.gz \
+        --exclude='.cache' \
+        --exclude='Downloads' \
+        --exclude='*.log' \
+        ~
+
+7.2 WEB DEVELOPMENT
+
+Backup project (exclude node_modules):
+    tar -czvf project-backup.tar.gz \
+        --exclude='node_modules' \
+        --exclude='.git' \
+        --exclude='dist' \
+        --exclude='*.log' \
+        project/
+
+Deploy via tar:
+    tar -czf - --exclude='.git' project/ | \
+        ssh server "tar -xzf - -C /var/www/"
+
+7.3 DATABASE BACKUP
+
+Backup with compression:
+    mysqldump database | gzip | \
+        tar -cvf backup.tar - --files-from /dev/null
+
+Or simpler:
+    mysqldump database | gzip > backup.sql.gz
+
+7.4 LARGE FILE HANDLING
+
+Progress bar with pv:
+    tar -cf - directory/ | pv | gzip > archive.tar.gz
+
+Extract with progress:
+    pv archive.tar.gz | tar -xzf -
+
+Resume interrupted transfer:
+    tar -cf - directory/ | nc server 12345
+
+================================================================================
+
+8. INTEGRATION WITH OTHER TOOLS
+
+8.1 SSH REMOTE OPERATIONS
+
+Backup to remote server:
+    tar -czf - /data | ssh user@server "cat > backup.tar.gz"
+
+Extract on remote:
+    tar -czf - localdir/ | ssh user@server "tar -xzf - -C /remote/path/"
+
+Remote to local:
+    ssh user@server "tar -czf - /remote/data" | tar -xzf -
+
+8.2 FIND INTEGRATION
+
+Archive specific files:
+    find . -name "*.py" -o -name "*.md" | \
+        tar -czvf code.tar.gz -T -
+
+Archive modified in last 7 days:
+    find . -mtime -7 -type f | \
+        tar -czvf recent.tar.gz -T -
+
+8.3 PARALLEL COMPRESSION
+
+Use multiple cores (pigz = parallel gzip):
+    tar -cf - directory/ | pigz > archive.tar.gz
+
+Extract with pigz:
+    pigz -dc archive.tar.gz | tar -xf -
+
+Install pigz: apt install pigz / brew install pigz
+
+================================================================================
+
+9. TROUBLESHOOTING
+
+Problem: "tar: Removing leading '/' from member names"
+Cause: Tar converts absolute to relative paths for safety
+Solution: Normal behavior, use -P to preserve absolute paths
+
+Problem: Archive is corrupt
+Check: tar -tzf archive.tar.gz
+test: gzip -t archive.tar.gz
+Fix: Try tar with --ignore-command-error
+
+Problem: Permission denied on extract
+Cause: Preserved permissions don't match current user
+Solution: tar -xvf archive.tar --no-same-permissions
+
+Problem: "file changed as we read it"
+Cause: File was modified during archiving
+Solution: Stop processes modifying files, or use --warning=no-file-changed
+
+Problem: Long filenames truncated
+Cause: Old tar format (ustar) has 100 char limit
+Solution: Use --format=posix (default on modern tar)
+
+Problem: Archive too large
+Solutions:
+  - Use split to create multi-volume
+  - Use higher compression (-J for xz)
+  - Exclude unnecessary files
+
+================================================================================
+
+10. MODERN ALTERNATIVES
+
+While tar remains essential, consider:
+
+rsync:
+    rsync -avz source/ dest/     Incremental sync
+    rsync -avz --exclude='.git' . server:/path/
+
+cpio:
+    find . | cpio -o > archive.cpio
+    (Better for special files, devices)
+
+7z:
+    7z a archive.7z directory/   Better compression than tar.gz
+
+zstd:
+    tar --zstd -cvf archive.tar.zst directory/
+    (Fast with good compression)
+
+borg/restic:
+    Deduplicating backup tools (modern replacement for tar)
+
+================================================================================
+
+11. QUICK REFERENCE
+
+Create:
+    tar -cvf archive.tar files/      Uncompressed
+    tar -czvf archive.tar.gz files/  Gzip compressed
+    tar -cjvf archive.tar.bz2 files/ Bzip2 compressed
+    tar -cJvf archive.tar.xz files/  XZ compressed
+
+Extract:
+    tar -xvf archive.tar             Auto-detect
+    tar -xvf archive.tar -C /dest    To directory
+    tar -xvf archive.tar --strip=1   Strip path levels
+
+List:
+    tar -tvf archive.tar             Detailed list
+    tar -tf archive.tar              Simple list
+
+Other:
+    tar -rvf archive.tar newfile     Append
+    tar -uvf archive.tar files/      Update
+    tar -tf archive.tar | wc -l      Count files
+
+================================================================================
+
+Remember: tar preserves much more than zip - permissions, ownership,
+links, timestamps, and directory structure. Essential for backups.
+
+================================================================================
+vim:ft=help:tw=80
