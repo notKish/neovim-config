@@ -135,19 +135,27 @@ if ts_textobjects_ok then
         ["]f"] = "@function.outer",
         ["]c"] = "@class.outer",
         ["]a"] = "@parameter.inner",
+        ["]i"] = "@conditional.outer",
+        ["]l"] = "@loop.outer",
       },
       goto_next_end = {
         ["]F"] = "@function.outer",
         ["]C"] = "@class.outer",
+        ["]I"] = "@conditional.outer",
+        ["]L"] = "@loop.outer",
       },
       goto_previous_start = {
         ["[f"] = "@function.outer",
         ["[c"] = "@class.outer",
         ["[a"] = "@parameter.inner",
+        ["[i"] = "@conditional.outer",
+        ["[l"] = "@loop.outer",
       },
       goto_previous_end = {
         ["[F"] = "@function.outer",
         ["[C"] = "@class.outer",
+        ["[I"] = "@conditional.outer",
+        ["[L"] = "@loop.outer",
       },
     },
   })
