@@ -1,0 +1,206 @@
+================================================================================
+                    C4-PLANTUML GUIDE
+          C4 model diagrams with PlantUML (layout & rendering)
+================================================================================
+
+References (authoritative upstream):
+  https://github.com/plantuml-stdlib/C4-PlantUML
+  https://github.com/plantuml-stdlib/C4-PlantUML/blob/master/LayoutOptions.md
+  https://c4model.com/
+
+
+1. WHAT IS C4-PLANTUML?
+
+C4-PlantUML is a macro library for PlantUML that implements the C4 model
+(software architecture in Context, Container, Component, Code views).
+
+You write declarative text (Person, System, Container, Rel, boundaries, ...).
+PlantUML turns that into a graph and hands it to Graphviz (the "dot" layout
+engine) to compute positions. You do not drag boxes; layout is automatic,
+with optional hints when the default result is wrong.
+
+
+2. SETUP: INCLUDING THE LIBRARY
+
+Pick ONE include that matches the diagram depth you need:
+
+  C4_Context.puml    — System Context / Landscape (people, software systems)
+  C4_Container.puml  — Adds Container (typical service-level diagram)
+  C4_Component.puml  — Adds Component (internal structure of a container)
+
+Remote (needs network when rendering):
+
+  !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Bundled with PlantUML (offline, pinned to your PlantUML version):
+
+  !include <C4/C4_Container>
+
+Local checkout (pass -DRELATIVE_INCLUDE="." to plantuml.jar, or VS Code
+plantuml.jarArgs) and:
+
+  !include %get_variable_value("RELATIVE_INCLUDE")/C4_Container.puml
+
+Prerequisite: Graphviz installed so PlantUML can run the layout engine.
+
+
+3. DIAGRAM TYPES (WHICH FILE TO INCLUDE)
+
+  • System Context / Landscape — C4_Context.puml
+  • Container diagram          — C4_Container.puml (most common)
+  • Component diagram          — C4_Component.puml
+  • Dynamic diagram            — C4_Dynamic.puml (collaboration / flows)
+  • Deployment                 — C4_Deployment.puml (nodes, instances)
+  • Sequence (C4-styled)      — dedicated include for sequence-style views
+
+Each file layers macros on top of the previous; deeper includes give more
+element types.
+
+
+4. HOW RENDERING / LAYOUT ACTUALLY WORKS
+
+4.1 Pipeline
+
+  1) Your .puml is expanded by PlantUML (includes, macros, variables).
+  2) C4 macros become PlantUML elements (nodes, arrows, clusters/boundaries).
+  3) For graph diagrams, PlantUML emits a directed graph for Graphviz.
+  4) Graphviz assigns nodes to "ranks" (rows/columns depending on rankdir)
+     and routes edges to minimize crossings and obey constraints.
+  5) PlantUML draws the final vector (SVG/PNG) from that layout.
+
+So: positions come from Graphviz's solver, not from explicit x/y coordinates
+in your source. Your source supplies nodes, edges, and invisible constraints.
+
+4.2 What "priority" means here
+
+There is no documented numeric priority list inside C4-PlantUML. The
+maintainers describe a practical ORDER OF ATTEMPT (trial-and-error, aligned
+with how dot uses edges and ranks):
+
+  A) Define elements first — components, containers, boundaries — in a
+     sensible order (often top-to-bottom or left-to-right as you want the
+     eye to read).
+
+  B) Use directionless relationships: Rel(from, to, ...) so Graphviz picks
+     a layout with minimal bias.
+
+  C) If wrong, upgrade SOME edges to directed relationships: Rel_U, Rel_D,
+     Rel_L, Rel_R (and BiRel_* for bidirectional). These add stronger hints
+     about which side of "from" the "to" node should sit.
+
+  D) Only if still wrong, add Lay_* — invisible ranking hints that do NOT
+     draw a relationship line but still constrain relative position.
+
+  E) Remove any directed Rel_* or Lay_* that does not change the output;
+     fewer constraints = more stable, easier-to-edit diagrams.
+
+Official wording: exhaust Rel_{direction} before Lay_{direction}; use the
+fewest directed statements that achieve the goal; avoid duplicating opposite
+constraints (e.g. Lay_R(A,B) AND Lay_L(B,A) does not help — try one or the
+other).
+
+
+5. GLOBAL FLOW: LAYOUT_TOP_DOWN, LAYOUT_LEFT_RIGHT, LAYOUT_LANDSCAPE
+
+Call at most one of these near the top (after include) to set overall flow.
+
+  LAYOUT_TOP_DOWN()     — Default. Main flow is vertical (typical).
+  LAYOUT_LEFT_RIGHT()   — Main flow is horizontal. Directed Rel_U/D/L/R are
+                          rotated with the layout (screen "right" follows the
+                          left-to-right flow).
+  LAYOUT_LANDSCAPE()    — Also rotates the diagram to a horizontal feel, but
+                          Rel_U/D/L/R keep their absolute meanings (up/down/
+                          left/right on the page are NOT rotated like in
+                          LAYOUT_LEFT_RIGHT). Use when you need landscape
+                          paper but still think in fixed compass directions.
+
+Important: With LANDSCAPE, behavior of Lay_*() was corrected in newer
+C4-PlantUML; old diagrams may shift. Legacy behavior: set before include:
+
+  !NO_LAY_ROTATE=1
+
+(or -DNO_LAY_ROTATE=1 on the Java command line). See upstream issue 376.
+
+
+6. RELATIONSHIPS: Rel vs Rel_* vs BiRel_*
+
+  Rel(from, to, label, ...)           — Undirected hint; layout is flexible.
+  Rel_U / Rel_D / Rel_L / Rel_R       — Directed; stronger placement hint.
+  BiRel / BiRel_U / BiRel_D / ...     — Bidirectional semantics + direction.
+
+Aliases: Rel_Up, Rel_Down, Rel_Left, Rel_Right (same as Rel_U, etc.).
+
+Other specialized macros exist in the library (e.g. Rel_Back, Rel_Neighbor)
+for arrow routing or adjacency; check the README "Relationship Types" and
+samples for your version.
+
+
+7. LAYOUT WITHOUT A VISIBLE EDGE: Lay_*
+
+When nodes have no Rel between them, or Rel_* is not enough, use invisible
+constraints:
+
+  Lay_U(from, to)   — to is placed "up" from from (relative to layout)
+  Lay_D(from, to)   — down
+  Lay_L(from, to)   — left
+  Lay_R(from, to)   — right
+
+  Lay_Distance(from, to, distance) — Adjust gap; useful with SHOW_FLOATING_
+  LEGEND() and LEGEND() alias (e.g. push legend away from an element).
+
+
+8. LEGENDS AND ORDER OF CALLS
+
+  LAYOUT_WITH_LEGEND() — Static legend area; stereotype-free layout option.
+
+  SHOW_LEGEND(...)     — Calculated legend (only used element types). Per
+                         upstream docs, SHOW_LEGEND() should be the LAST call
+                         in the diagram.
+
+  SHOW_FLOATING_LEGEND() — Legend as a floating element; place AFTER the
+                         elements it describes. May need Lay_Distance to
+                         position relative to other nodes.
+
+  Do not wrap the entire diagram in one outer "all enclosing" boundary —
+  relationship processing and floating legend placement can misbehave.
+
+
+9. PRACTICAL CHECKLIST (FROM UPSTREAM LAYOUT GUIDANCE)
+
+  • Prefer few directed Rel_* / Lay_* lines; delete ones that do nothing.
+  • Order inner boundary contents first; outer boundaries often follow.
+  • When chaining A → B → C, use one direction consistently, e.g. Rel_R(A,B)
+    and Rel_R(B,C) rather than mixing.
+  • Avoid forcing both inner and outer elements with directed layout unless
+    necessary.
+  • Keep layout hints at the same nesting level when possible.
+  • Live preview (e.g. VS Code) can flicker while typing; wait for save or
+    reopen preview if the image looks inconsistent.
+
+
+10. MINIMAL CONTAINER EXAMPLE
+
+@startuml
+!include <C4/C4_Container>
+LAYOUT_TOP_DOWN()
+
+Person(user, "User")
+System_Boundary(sys, "Internet Banking") {
+    Container(web, "Web App", "Java", "UI")
+    Container(api, "API", "Java", "Business logic")
+}
+System_Ext(email, "E-mail system")
+
+Rel(user, web, "Uses", "HTTPS")
+Rel(web, api, "Uses", "HTTPS")
+Rel(api, email, "Sends mail", "SMTP")
+@enduml
+
+
+11. WHERE TO GO NEXT
+
+  • LayoutOptions.md — legends, sketch style, stereotypes, sequence options.
+  • Themes.md — visual themes and language packs.
+  • samples/C4CoreDiagrams.md — copy-paste patterns.
+
+================================================================================
