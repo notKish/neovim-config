@@ -54,6 +54,72 @@ local function lsp_completion_cmp(a, b)
   return la < lb
 end
 
+local jdtls_root_markers = {
+  ".git",
+  "mvnw",
+  "gradlew",
+  "settings.gradle",
+  "settings.gradle.kts",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+}
+
+local function setup_jdtls_for_buffer(bufnr)
+  local ok, jdtls = pcall(require, "jdtls")
+  if not ok then
+    vim.notify("nvim-jdtls is not installed", vim.log.levels.WARN)
+    return
+  end
+
+  local filename = vim.api.nvim_buf_get_name(bufnr)
+  if filename == "" then
+    return
+  end
+
+  local root_dir = vim.fs.root(filename, jdtls_root_markers)
+  if not root_dir then
+    vim.notify("Could not detect Java project root for jdtls", vim.log.levels.WARN)
+    return
+  end
+
+  local workspace_root = vim.fs.joinpath(vim.fn.stdpath("cache"), "jdtls-workspaces")
+  vim.fn.mkdir(workspace_root, "p")
+  local workspace_dir = vim.fs.joinpath(workspace_root, vim.fs.basename(root_dir))
+
+  jdtls.start_or_attach({
+    cmd = {
+      "jdtls",
+      "--jvm-arg=-Xms2G",
+      "--jvm-arg=-Xmx4G",
+      "--jvm-arg=-XX:+UseG1GC",
+      "--jvm-arg=-XX:+UseStringDeduplication",
+      "-data",
+      workspace_dir,
+    },
+    root_dir = root_dir,
+    capabilities = lsp_capabilities,
+    settings = {
+      java = {
+        eclipse = { downloadSources = true },
+        maven = { downloadSources = true },
+        contentProvider = { preferred = "fernflower" },
+        implementationsCodeLens = { enabled = true },
+        referencesCodeLens = { enabled = true },
+        references = { includeDecompiledSources = true },
+        format = { enabled = true },
+        imports = {
+          gradle = { enabled = true },
+          maven = { enabled = true },
+        },
+        configuration = {
+          updateBuildConfiguration = "automatic",
+        },
+      },
+    },
+  })
+end
+
 -- Language servers often advertise only "." "(" etc. as triggerCharacters. Neovim autotrigger only
 -- queries clients registered for the typed key (:h lsp-completion), so without this, "def" only
 -- hits mini.snippets — Pyright never runs until <C-Space> (Invoked). Merge identifier chars first.
@@ -251,35 +317,6 @@ vim.lsp.config("clangd", {
   capabilities = lsp_capabilities,
 })
 
-vim.lsp.config("jdtls", {
-  cmd = {
-    "jdtls",
-    "--jvm-arg=-Xms2G",
-    "--jvm-arg=-Xmx4G",
-    "--jvm-arg=-XX:+UseG1GC",
-    "--jvm-arg=-XX:+UseStringDeduplication",
-  },
-  filetypes = { "java" },
-  capabilities = lsp_capabilities,
-  settings = {
-    java = {
-      eclipse = { downloadSources = true },
-      maven = { downloadSources = true },
-      implementationsCodeLens = { enabled = true },
-      referencesCodeLens = { enabled = true },
-      format = { enabled = true },
-      imports = {
-        gradle = { enabled = true },
-        maven = { enabled = true },
-      },
-      configuration = {
-        updateBuildConfiguration = "automatic",
-      },
-    },
-  },
-  root_markers = { "pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", ".git" },
-})
-
 vim.lsp.config("bashls", {
   cmd = { "bash-language-server", "start" },
   filetypes = { "sh", "bash", "zsh" },
@@ -312,4 +349,11 @@ vim.lsp.config("nil_ls", {
   capabilities = lsp_capabilities,
 })
 
-vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "ruff", "clangd", "jdtls", "bashls", "gopls", "nil_ls" })
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "java",
+  callback = function(args)
+    setup_jdtls_for_buffer(args.buf)
+  end,
+})
+
+vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "ruff", "clangd", "bashls", "gopls", "nil_ls" })

@@ -45,6 +45,7 @@ local pack_ok, pack_err = pcall(vim.pack.add, {
   { src = gh("echasnovski/mini.nvim"), version = "a995fe9cd4193fb492b5df69175a351a74b3d36b" },
   { src = gh("nvim-treesitter/nvim-treesitter"), version = "6620ae1c44dfa8623b22d0cbf873a9e8d073b849" },
   { src = gh("nvim-treesitter/nvim-treesitter-textobjects"), version = "HEAD" },
+  { src = gh("mfussenegger/nvim-jdtls"), version = "HEAD" },
 }, { confirm = false, load = true })
 if not pack_ok then
   vim.notify(

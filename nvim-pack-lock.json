@@ -10,6 +10,11 @@
       "src": "https://github.com/echasnovski/mini.nvim",
       "version": "'a995fe9cd4193fb492b5df69175a351a74b3d36b'"
     },
+    "nvim-jdtls": {
+      "rev": "77ccaeb422f8c81b647605da5ddb4a7f725cda90",
+      "src": "https://github.com/mfussenegger/nvim-jdtls",
+      "version": "'HEAD'"
+    },
     "nvim-treesitter": {
       "rev": "6620ae1c44dfa8623b22d0cbf873a9e8d073b849",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter",
