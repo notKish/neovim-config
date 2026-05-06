@@ -30,6 +30,7 @@ require("statusline")
 require("terminal")
 -- mini.pick for file finder UI (replaces vim.ui.select with fuzzy picker)
 require("pick_pack")
+require("leetcode_pack")
 
 -- Better startup screen when no files are opened
 vim.api.nvim_create_autocmd("VimEnter", {
@@ -55,6 +56,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
       lines[#lines + 1] = "  <leader>?        Live grep"
       lines[#lines + 1] = "  <leader>e        File explorer"
       lines[#lines + 1] = "  <leader>gg       Lazygit"
+      lines[#lines + 1] = "  <leader>lq       LeetCode (DSA)"
       vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
       vim.bo.modifiable = false
       vim.bo.bufhidden = "wipe"

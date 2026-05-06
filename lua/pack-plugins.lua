@@ -46,6 +46,10 @@ local pack_ok, pack_err = pcall(vim.pack.add, {
   { src = gh("nvim-treesitter/nvim-treesitter"), version = "6620ae1c44dfa8623b22d0cbf873a9e8d073b849" },
   { src = gh("nvim-treesitter/nvim-treesitter-textobjects"), version = "HEAD" },
   { src = gh("mfussenegger/nvim-jdtls"), version = "HEAD" },
+  -- LeetCode / DSA practice (kawre/leetcode.nvim); pickers: plenary + nui; uses mini.pick if :Pick exists
+  { src = gh("nvim-lua/plenary.nvim"), version = "HEAD" },
+  { src = gh("MunifTanjim/nui.nvim"), version = "HEAD" },
+  { src = gh("kawre/leetcode.nvim"), version = "HEAD" },
 }, { confirm = false, load = true })
 if not pack_ok then
   vim.notify(
@@ -63,6 +67,7 @@ local ts_ok, ts_err = pcall(function()
   require("nvim-treesitter").install({
     "lua",
     "python",
+    "java",
     "javascript",
     "typescript",
     "tsx",
@@ -70,6 +75,7 @@ local ts_ok, ts_err = pcall(function()
     "markdown",
     "json",
     "toml",
+    "html",
     "c",
     "cpp",
     "vim",
@@ -84,6 +90,7 @@ end
 local ts_filetypes = {
   "lua",
   "python",
+  "java",
   "javascript",
   "javascriptreact",
   "typescript",

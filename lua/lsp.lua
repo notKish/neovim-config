@@ -65,6 +65,33 @@ local jdtls_root_markers = {
   "build.gradle.kts",
 }
 
+--- Resolve lombok.jar for `-javaagent:` so JDT-LS sees @Data/@Builder generated members.
+--- Without this, getters/setters are "undefined" for diagnostics. Override with $JDTLS_LOMBOK_PATH.
+local function jdtls_lombok_jar()
+  local from_env = vim.env.JDTLS_LOMBOK_PATH
+  if type(from_env) == "string" and from_env ~= "" and vim.fn.filereadable(from_env) == 1 then
+    return from_env
+  end
+  local home = vim.env.HOME
+  if type(home) ~= "string" or home == "" then
+    return nil
+  end
+  local m2 = vim.fs.joinpath(home, ".m2/repository/org/projectlombok/lombok")
+  if vim.fn.isdirectory(m2) == 0 then
+    return nil
+  end
+  local pattern = m2 .. "/*/lombok-*.jar"
+  local found = vim.fn.glob(pattern, false, true)
+  if type(found) == "string" and found ~= "" then
+    found = { found }
+  end
+  if type(found) ~= "table" or #found == 0 then
+    return nil
+  end
+  table.sort(found)
+  return found[#found]
+end
+
 local function setup_jdtls_for_buffer(bufnr)
   local ok, jdtls = pcall(require, "jdtls")
   if not ok then
@@ -87,16 +114,22 @@ local function setup_jdtls_for_buffer(bufnr)
   vim.fn.mkdir(workspace_root, "p")
   local workspace_dir = vim.fs.joinpath(workspace_root, vim.fs.basename(root_dir))
 
+  local cmd = {
+    "jdtls",
+    "--jvm-arg=-Xms2G",
+    "--jvm-arg=-Xmx4G",
+    "--jvm-arg=-XX:+UseG1GC",
+    "--jvm-arg=-XX:+UseStringDeduplication",
+  }
+  local lombok = jdtls_lombok_jar()
+  if lombok then
+    cmd[#cmd + 1] = "--jvm-arg=-javaagent:" .. lombok
+  end
+  cmd[#cmd + 1] = "-data"
+  cmd[#cmd + 1] = workspace_dir
+
   jdtls.start_or_attach({
-    cmd = {
-      "jdtls",
-      "--jvm-arg=-Xms2G",
-      "--jvm-arg=-Xmx4G",
-      "--jvm-arg=-XX:+UseG1GC",
-      "--jvm-arg=-XX:+UseStringDeduplication",
-      "-data",
-      workspace_dir,
-    },
+    cmd = cmd,
     root_dir = root_dir,
     capabilities = lsp_capabilities,
     settings = {
@@ -172,6 +205,20 @@ vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local buf = args.buf
     local client = vim.lsp.get_client_by_id(args.data.client_id)
+
+    -- jdt.ls: publish diagnostics while editing (e.g. constructors); global config has
+    -- update_in_insert = false which makes Java errors feel missing until Normal mode.
+    if client and client.name == "jdtls" then
+      local ns = vim.lsp.diagnostic.get_namespace(client.id)
+      vim.diagnostic.config({
+        virtual_text = { prefix = "●" },
+        signs = true,
+        underline = true,
+        update_in_insert = true,
+        severity_sort = true,
+        float = { border = "rounded", source = true },
+      }, ns)
+    end
 
     -- Ruff: prefer Pyright for completion; including Ruff can stall merged completion if its
     -- request never finishes, hiding mini.snippets and other clients.

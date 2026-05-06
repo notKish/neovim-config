@@ -5,10 +5,20 @@
       "src": "https://github.com/rafamadriz/friendly-snippets",
       "version": "'6cd7280adead7f586db6fccbd15d2cac7e2188b9'"
     },
+    "leetcode.nvim": {
+      "rev": "4e8b3683940a8377379ce9398e7f329e3560b42c",
+      "src": "https://github.com/kawre/leetcode.nvim",
+      "version": "'HEAD'"
+    },
     "mini.nvim": {
       "rev": "a995fe9cd4193fb492b5df69175a351a74b3d36b",
       "src": "https://github.com/echasnovski/mini.nvim",
       "version": "'a995fe9cd4193fb492b5df69175a351a74b3d36b'"
+    },
+    "nui.nvim": {
+      "rev": "de740991c12411b663994b2860f1a4fd0937c130",
+      "src": "https://github.com/MunifTanjim/nui.nvim",
+      "version": "'HEAD'"
     },
     "nvim-jdtls": {
       "rev": "77ccaeb422f8c81b647605da5ddb4a7f725cda90",
@@ -23,6 +33,11 @@
     "nvim-treesitter-textobjects": {
       "rev": "851e865342e5a4cb1ae23d31caf6e991e1c99f1e",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects",
+      "version": "'HEAD'"
+    },
+    "plenary.nvim": {
+      "rev": "74b06c6c75e4eeb3108ec01852001636d85a932b",
+      "src": "https://github.com/nvim-lua/plenary.nvim",
       "version": "'HEAD'"
     }
   }

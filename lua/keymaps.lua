@@ -38,6 +38,9 @@ for _, row in ipairs(resize_maps) do
   map("n", row[1], row[2], { desc = row[3], silent = true })
 end
 
+-- LeetCode / DSA (leetcode.nvim)
+map("n", "<leader>lq", "<cmd>Leet<cr>", { desc = "LeetCode menu (DSA practice)" })
+
 -- buffers
 map("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 map("n", "<S-l>", "<cmd>bnext<cr>", { desc = "Next buffer" })

@@ -117,6 +117,9 @@ function M.apply()
     { "TabLineSel", { fg = p.tabline_sel_fg, bg = p.tabline_sel_bg, bold = true } },
     { "TabLineFill", { fg = p.tabline_fg, bg = p.tabline_bg } },
     { "TabLineMod", { fg = p.constant, bg = p.tabline_bg, bold = true } },
+    -- Floats (leetcode.nvim description uses Normal:NormalFloat — avoid grey-on-grey)
+    { "NormalFloat", { fg = p.fg, bg = p.pmenu } },
+    { "FloatBorder", { fg = p.linenr, bg = p.pmenu } },
   })
 end
 
