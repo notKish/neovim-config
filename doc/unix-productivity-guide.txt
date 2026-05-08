@@ -313,6 +313,112 @@ JSON PROCESSING                                          *unix-productivity-json
   :%!jq -R -s -c 'split("\\n")'
       Convert lines to JSON array.
 
+  For YAML manifests, JSON<->YAML conversion, XML, and yq-specific operators,
+  see |unix-productivity-yq|.
+
+======================================================================
+YAML / JSON / XML WITH YQ                                  *unix-productivity-yq*
+======================================================================
+
+  This section is written for the Go implementation (v4),
+  https://github.com/mikefarah/yq — the usual package names are `yq` (brew),
+  `yq-go` (nixpkgs: nix profile install nixpkgs#yq-go). A different PyPI tool
+  also named yq wraps jq; if flags differ, check `yq --version` and PATH.
+
+  Yq uses jq-like expressions on YAML and can read/write JSON, XML, CSV,
+  TOML, properties, INI, and more (`-p` / `-o` for input and output format).
+  Pipe the buffer with :%!yq 'EXPR' or :'<,'>!yq 'EXPR'. Prove changes on a
+  visual selection first.
+
+  Pretty-print and convert (stdin/buffer is auto format; stdin defaults YAML):
+
+  :%!yq .
+      Normalize and print as YAML (typical round-trip for a manifest buffer).
+
+  :%!yq -P .
+      Pretty style: shorthand for clearing node style then formatting.
+
+  :%!yq -P -oy .
+      JSON buffer in, YAML out (same as `yq -Poy file.json` on disk).
+
+  :%!yq -o=json -P .
+      YAML buffer to indented JSON.
+
+  :%!yq -o=json -I=0 .
+      JSON output with indent 0 (dense JSON; tune `-I` for width).
+
+  :%!yq -P -ox .
+      Read XML (auto from extension; else `yq -p=xml`) and print YAML.
+
+  Flags reference: `-p` (`--input-format`) and `-o` (`--output-format`) accept
+  aliases like `yaml`, `y`, `json`, `j`, `xml`, `x`. Omit `eval` — it is the
+  default subcommand in v4.
+
+  Extract and navigate (paths match jq habits; use brackets for odd keys):
+
+  :%!yq '.metadata.name'
+      Scalar or subtree at metadata.name.
+
+  :%!yq '.spec.containers[] | .name'
+      Emit one line per container name.
+
+  :%!yq '.items[] | select(.kind == "Deployment") | .metadata.name'
+      Filter then project (Kubernetes style).
+
+  :%!yq '.. | select(has("replicas"))'
+      Find nodes that own a replicas key (illustrative walk; refine as needed).
+
+  Update the buffer (assignment, merge, delete, sort keys):
+
+  :%!yq '.spec.replicas = 3'
+      Set a number; strings use double quotes inside the expression.
+
+  :%!yq '.labels += {"env": "prod"}'
+      Merge into a map.
+
+  :%!yq 'del(.status)'
+      Drop a key (e.g. strip status before kubectl apply --dry-run).
+
+  :%!yq 'sort_keys(.)'
+      Sort mapping keys at root; nested `sort_keys` patterns are in upstream
+      operator docs.
+
+  :%!yq '(.[] | select(.name == "foo") | .port) = 8080'
+      Update one array element by condition (pattern from upstream examples).
+
+  Environment and files on disk (shell, not Ex):
+
+  NAME=prod yq -i '.env = strenv(NAME)' file.yaml
+      In-place file edit with `strenv` (safe quoting in zsh/bash).
+
+  yq -n 'load("a.yaml") * load("b.yaml")'
+      New document from deep merge of two files (`-n` null input, expression
+      builds output).
+
+  yq ea '. as $item ireduce ({}; . * $item)' path/*.yml
+      Reduce-merge many files (`ea` is eval-all).
+
+  Multi-document YAML (multiple `---` streams):
+
+  Yq supports multi-doc files; flags include `-N` to omit `---` separators on
+  output and split/concat recipes in the manual. For a single buffer, prefer
+  an expression that handles each doc (see eval-all and multi-document pages)
+  or split files, edit, rejoin.
+
+  Neovim quoting:
+
+  Wrap the expression in single quotes after :%! so the shell does not expand.
+  A literal single quote inside: end the quote, use '' for one quote, resume:
+      :%!yq '.note = "it''s done"'
+  On Windows PowerShell, upstream documents different quoting rules.
+
+  Prefer `jq` and |unix-productivity-json| for JSON-only pipelines; use `yq`
+  when you need YAML semantics, format conversion, or Kubernetes manifests.
+
+  Docs, recipes, install, operators (comments, anchors, CSV):
+
+      https://mikefarah.gitbook.io/yq/
+
 ======================================================================
 DATE AND TIME                                            *unix-productivity-time*
 ======================================================================
@@ -654,6 +760,9 @@ PARALLEL PROCESSING                                      *unix-productivity-para
 ======================================================================
 RELATED GUIDES
 ======================================================================
+
+  :help unix-productivity-yq
+      yq: YAML, JSON, XML, manifests; :%! filters and disk workflows.
 
   :help awk-underrated-unix-guide
       Practical awk recipes + underrated Unix command cookbook.
