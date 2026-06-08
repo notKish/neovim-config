@@ -1,33 +1,93 @@
 -- olimorris/codecompanion.nvim — chat, inline AI, agents, MCP (:CodeCompanion*)
--- Uses built-in OpenAI / Anthropic adapters. Override with vim.g.codecompanion.adapter
--- or vim.g.ai_completion.provider (see lua/ai.lua).
-local function default_adapter()
+--
+-- Provider selection (pick one):
+--   1. vim.g.codecompanion.adapter = "deepseek"   — CodeCompanion-only override
+--   2. vim.g.ai_completion.provider = "deepseek"  — shared with <C-a> completion (lua/ai.lua)
+--   3. Auto: first provider in vim.g.ai_completion.providers with a set API key
+--
+-- Add providers under vim.g.ai_completion.providers (same table as ai.lua):
+--   deepseek = {
+--     api = "openai",
+--     env_key = "DEEPSEEK_API_KEY",
+--     model = "deepseek-chat",
+--     endpoint = "https://api.deepseek.com/v1/chat/completions",
+--   }
+--
+-- Per-interaction overrides:
+--   vim.g.codecompanion = {
+--     adapter = "anthropic",
+--     interactions = { inline = { adapter = "openai" } },
+--   }
+--
+-- At runtime, switch adapter in chat: :CodeCompanionChat adapter=openai
+local ai = require("ai")
+
+local function active_adapter(config)
   local cc = vim.g.codecompanion or {}
-  if cc.adapter then
-    return cc.adapter
-  end
-
-  local provider = (vim.g.ai_completion or {}).provider
-  if provider == "openai" or provider == "anthropic" then
-    return provider
-  end
-
-  local openai_key = vim.env.OPENAI_API_KEY
-  local anthropic_key = vim.env.ANTHROPIC_API_KEY
-  if openai_key and openai_key ~= "" and (not anthropic_key or anthropic_key == "") then
-    return "openai"
-  end
-  return "anthropic"
+  return cc.adapter or config.provider
 end
 
-local adapter = default_adapter()
+local function build_http_adapter(name, spec)
+  local base = spec.api == "anthropic" and "anthropic" or "openai"
+  return function()
+    local opts = {
+      name = name,
+      formatted_name = name:sub(1, 1):upper() .. name:sub(2),
+      url = spec.endpoint,
+      env = {
+        api_key = spec.env_key,
+      },
+      schema = {
+        model = {
+          default = spec.model,
+          choices = {
+            [spec.model] = {},
+          },
+        },
+      },
+    }
+    if spec.api == "anthropic" and spec.anthropic_version then
+      opts.headers = {
+        ["anthropic-version"] = spec.anthropic_version,
+      }
+    end
+    return require("codecompanion.adapters").extend(base, opts)
+  end
+end
+
+local function build_http_adapters(providers)
+  local http = {}
+  for name, spec in pairs(providers) do
+    if type(spec) == "table" and spec.api and spec.endpoint and spec.env_key and spec.model then
+      http[name] = build_http_adapter(name, spec)
+    end
+  end
+  return http
+end
+
+local function interaction_adapters(config, default)
+  local cc = vim.g.codecompanion or {}
+  local user = cc.interactions or {}
+  return {
+    chat = (user.chat and user.chat.adapter) or default,
+    inline = (user.inline and user.inline.adapter) or default,
+    cmd = (user.cmd and user.cmd.adapter) or default,
+  }
+end
+
+local config = ai.resolve_config()
+local adapter = active_adapter(config)
+local interactions = interaction_adapters(config, adapter)
 
 local ok, err = pcall(function()
   require("codecompanion").setup({
+    adapters = {
+      http = build_http_adapters(config.providers),
+    },
     interactions = {
-      chat = { adapter = adapter },
-      inline = { adapter = adapter },
-      cmd = { adapter = adapter },
+      chat = { adapter = interactions.chat },
+      inline = { adapter = interactions.inline },
+      cmd = { adapter = interactions.cmd },
     },
   })
 end)

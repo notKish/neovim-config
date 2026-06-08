@@ -566,6 +566,10 @@ function M.complete()
 end
 
 -- Setup function to configure the module
+function M.resolve_config()
+  return get_config()
+end
+
 function M.setup(user_config)
   user_config = user_config or {}
   local merged = vim.tbl_deep_extend("force", default_config, user_config)
