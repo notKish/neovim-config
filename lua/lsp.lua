@@ -24,16 +24,20 @@ local function pyright_add_missing_imports()
   })
 end
 
--- Pum order: (1) LSP semantic — everything except Snippet/Text kinds; (2) Snippet — mini.snippets;
--- (3) Text — plain Text kind. Only the first |vim.lsp.completion.enable| for a buffer stores `cmp`,
--- so pass this from every client — whichever attaches first wins.
+-- Pum order: (1) LSP semantic; (2) LSP Snippet; (3) LSP Text; (4) buffer/path/tag keywords.
+-- Non-LSP items (from 'complete' + <C-n>) have no user_data.nvim.lsp.completion_item.
 local kinds = vim.lsp.protocol.CompletionItemKind
 local snippet_kind, text_kind = kinds.Snippet, kinds.Text
-local function completion_tier(item)
-  if not item then
-    return 1
+
+local function lsp_completion_item(pum_item)
+  return vim.tbl_get(pum_item, "user_data", "nvim", "lsp", "completion_item")
+end
+
+local function completion_tier(lsp_item)
+  if not lsp_item then
+    return 4
   end
-  local k = item.kind
+  local k = lsp_item.kind
   if k == snippet_kind then
     return 2
   end
@@ -42,16 +46,27 @@ local function completion_tier(item)
   end
   return 1
 end
+
+local function pum_label(pum_item, lsp_item)
+  if lsp_item then
+    return lsp_item.sortText or lsp_item.label or ""
+  end
+  return pum_item.word or pum_item.abbr or ""
+end
+
 local function lsp_completion_cmp(a, b)
-  local ia = vim.tbl_get(a, "user_data", "nvim", "lsp", "completion_item")
-  local ib = vim.tbl_get(b, "user_data", "nvim", "lsp", "completion_item")
+  local ia = lsp_completion_item(a)
+  local ib = lsp_completion_item(b)
   local ta, tb = completion_tier(ia), completion_tier(ib)
   if ta ~= tb then
     return ta < tb
   end
-  local la = ia and (ia.sortText or ia.label) or ""
-  local lb = ib and (ib.sortText or ib.label) or ""
-  return la < lb
+  local fa = a._fuzzy_score or 0
+  local fb = b._fuzzy_score or 0
+  if fa ~= fb then
+    return fa > fb
+  end
+  return pum_label(a, ia) < pum_label(b, ib)
 end
 
 local jdtls_root_markers = {

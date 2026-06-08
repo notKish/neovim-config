@@ -2,8 +2,9 @@
 local map = vim.keymap.set
 
 -- "popup": extra docs/detail (LSP resolve) for the highlighted pum item (:h completeopt).
+-- "fuzzy": substring match; "nosort": keep LSP cmp order (see lsp.lua lsp_completion_cmp).
 -- With "noselect", no row is highlighted until you <C-n>/<C-p> — move once to show import/module "detail" in the popup.
-vim.opt.completeopt = { "menu", "menuone", "noselect", "popup", "fuzzy" }
+vim.opt.completeopt = { "menu", "menuone", "noselect", "popup", "fuzzy", "nosort" }
 vim.opt.pumheight = 12
 vim.opt.pumborder = "rounded"
 vim.opt.shortmess:append("c")
@@ -32,16 +33,33 @@ local function jump_snippet(direction)
   end
 end
 
--- Trigger: fire LSP completion AND native keyword sources together so buffer
--- words appear alongside LSP items in the same pum.
-local function trigger_completion()
-  if vim.lsp.completion and vim.lsp.completion.get then
-    vim.lsp.completion.get()
-  end
-  -- <C-n> merges buffer/path/tag sources (vim.opt.complete) into the pum.
-  -- Use "n" flag so it doesn't remap; schedule so LSP has time to open first.
+-- Trigger: LSP first, then merge buffer/path/tag keywords into the same pum.
+local function merge_buffer_words()
   vim.api.nvim_feedkeys(
     vim.api.nvim_replace_termcodes("<C-n>", true, false, true), "n", false)
+end
+
+local function trigger_completion()
+  if not (vim.lsp.completion and vim.lsp.completion.get) then
+    merge_buffer_words()
+    return
+  end
+
+  vim.lsp.completion.get()
+
+  -- LSP is async; wait for the pum before merging 'complete' sources so LSP items stay on top.
+  local waited = 0
+  local function try_merge()
+    if vim.fn.pumvisible() == 1 then
+      merge_buffer_words()
+      return
+    end
+    waited = waited + 10
+    if waited < 200 then
+      vim.defer_fn(try_merge, 10)
+    end
+  end
+  vim.defer_fn(try_merge, 10)
 end
 
 map("i", "<C-Space>", trigger_completion, { desc = "Trigger completion (LSP + buffer words)" })
