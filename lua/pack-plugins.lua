@@ -50,6 +50,8 @@ local pack_ok, pack_err = pcall(vim.pack.add, {
   { src = gh("nvim-lua/plenary.nvim"), version = "HEAD" },
   { src = gh("MunifTanjim/nui.nvim"), version = "HEAD" },
   { src = gh("kawre/leetcode.nvim"), version = "HEAD" },
+  -- AI chat, inline, agents (olimorris/codecompanion.nvim)
+  { src = gh("olimorris/codecompanion.nvim"), version = vim.version.range("^19.0.0") },
 }, { confirm = false, load = true })
 if not pack_ok then
   vim.notify(
@@ -80,6 +82,7 @@ local ts_ok, ts_err = pcall(function()
     "cpp",
     "vim",
     "vimdoc",
+    "yaml",
   })
 end)
 if not ts_ok then

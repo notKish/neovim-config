@@ -6,163 +6,229 @@
 -- <C-k>      — cycle to previous suggestion
 -- <C-e>      — dismiss
 --
--- Configuration via vim.g.ai_completion (or set defaults below)
+-- Configuration via vim.g.ai_completion (or set defaults below).
+-- Each provider declares `api = "openai"` or `api = "anthropic"` for compatible endpoints.
 --
--- Example for MiniMax:
+-- Example with multiple providers:
 --   vim.g.ai_completion = {
---     provider = "minimax",
+--     provider = "anthropic", -- active provider name
 --     num_suggestions = 3,
 --     providers = {
---       minimax = {
---         env_key = "MINIMAX_API_KEY",
---         model = "MiniMax-M2.7",
---         endpoint = "https://api.minimax.io/anthropic/v1/messages",
---         max_tokens = 512,
+--       anthropic = {
+--         api = "anthropic",
+--         env_key = "ANTHROPIC_API_KEY",
+--         model = "claude-sonnet-4-20250514",
+--         endpoint = "https://api.anthropic.com/v1/messages",
 --       },
---     },
---   }
---
--- Example for OpenAI:
---   vim.g.ai_completion = {
---     provider = "openai",
---     num_suggestions = 3,
---     providers = {
 --       openai = {
+--         api = "openai",
 --         env_key = "OPENAI_API_KEY",
 --         model = "gpt-4o",
 --         endpoint = "https://api.openai.com/v1/chat/completions",
---         max_tokens = 512,
+--       },
+--       deepseek = {
+--         api = "openai",
+--         env_key = "DEEPSEEK_API_KEY",
+--         model = "deepseek-chat",
+--         endpoint = "https://api.deepseek.com/v1/chat/completions",
 --       },
 --     },
 --   }
 
 local M = {}
 
+local openai_compat = {
+  format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
+    return vim.json.encode({
+      model = model,
+      max_tokens = max_tokens,
+      temperature = temperature,
+      messages = {
+        { role = "system", content = system_prompt },
+        { role = "user", content = user_prompt },
+      },
+    })
+  end,
+  get_headers = function(api_key)
+    return {
+      "-H", "Content-Type: application/json",
+      "-H", "Authorization: Bearer " .. api_key,
+    }
+  end,
+  extract_completion = function(response)
+    if not response or type(response) ~= "table" then
+      return nil
+    end
+    local choice = response.choices and response.choices[1]
+    if choice and choice.message and choice.message.content then
+      return choice.message.content
+    end
+    return nil
+  end,
+}
+
+local anthropic_compat = {
+  format_body = function(model, max_tokens, temperature, system_prompt, user_prompt, provider)
+    local user_content = user_prompt
+    if provider and provider.user_content_blocks then
+      user_content = { { type = "text", text = user_prompt } }
+    end
+    return vim.json.encode({
+      model = model,
+      max_tokens = max_tokens,
+      temperature = temperature,
+      system = system_prompt,
+      messages = {
+        { role = "user", content = user_content },
+      },
+    })
+  end,
+  get_headers = function(api_key, provider)
+    local headers = {
+      "-H", "Content-Type: application/json",
+      "-H", "x-api-key: " .. api_key,
+      "-H", "anthropic-version: " .. ((provider and provider.anthropic_version) or "2023-06-01"),
+    }
+    return headers
+  end,
+  extract_completion = function(response)
+    if not response or type(response) ~= "table" then
+      return nil
+    end
+    for _, block in ipairs(response.content or {}) do
+      if block.type == "text" and block.text and block.text ~= "" then
+        return block.text
+      end
+    end
+    return nil
+  end,
+}
+
+---@param spec table Provider spec: api, env_key, model, endpoint, max_tokens?, user_content_blocks?, anthropic_version?
+---@return table
+function M.build_provider(spec)
+  local api = spec.api or "openai"
+  local template = api == "anthropic" and anthropic_compat or openai_compat
+  local provider = vim.tbl_deep_extend("force", vim.deepcopy(template), {
+    api = api,
+    env_key = spec.env_key,
+    model = spec.model,
+    endpoint = spec.endpoint,
+    max_tokens = spec.max_tokens or 512,
+    user_content_blocks = spec.user_content_blocks,
+    anthropic_version = spec.anthropic_version,
+  })
+
+  if api == "anthropic" then
+    local base_format = provider.format_body
+    provider.format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
+      return base_format(model, max_tokens, temperature, system_prompt, user_prompt, provider)
+    end
+    local base_headers = provider.get_headers
+    provider.get_headers = function(api_key)
+      return base_headers(api_key, provider)
+    end
+  end
+
+  local skip = {
+    api = true,
+    env_key = true,
+    model = true,
+    endpoint = true,
+    max_tokens = true,
+    user_content_blocks = true,
+    anthropic_version = true,
+  }
+  for key, value in pairs(spec) do
+    if not skip[key] then
+      provider[key] = value
+    end
+  end
+
+  return provider
+end
+
+local default_providers = {
+  openai = M.build_provider({
+    api = "openai",
+    env_key = "OPENAI_API_KEY",
+    model = "gpt-4o",
+    endpoint = "https://api.openai.com/v1/chat/completions",
+  }),
+  anthropic = M.build_provider({
+    api = "anthropic",
+    env_key = "ANTHROPIC_API_KEY",
+    model = "claude-sonnet-4-20250514",
+    endpoint = "https://api.anthropic.com/v1/messages",
+  }),
+}
+
+local function provider_has_key(name, providers)
+  local provider = providers[name]
+  if not provider or not provider.env_key then
+    return false
+  end
+  local key = vim.env[provider.env_key]
+  return key ~= nil and key ~= ""
+end
+
+local function default_provider(config)
+  if config.provider then
+    return config.provider
+  end
+
+  local providers = config.providers or default_providers
+  for _, name in ipairs({ "anthropic", "openai" }) do
+    if provider_has_key(name, providers) then
+      return name
+    end
+  end
+
+  for name, _ in pairs(providers) do
+    if provider_has_key(name, providers) then
+      return name
+    end
+  end
+
+  return "anthropic"
+end
+
+local function merge_providers(user_providers)
+  local merged = vim.deepcopy(default_providers)
+  for name, spec in pairs(user_providers or {}) do
+    if type(spec) ~= "table" then
+      merged[name] = spec
+    elseif spec.api or spec.format_body or spec.get_headers or spec.extract_completion then
+      merged[name] = spec.api and M.build_provider(spec) or vim.tbl_deep_extend("force", merged[name] or {}, spec)
+    elseif merged[name] then
+      merged[name] = vim.tbl_deep_extend("force", merged[name], spec)
+    else
+      vim.notify(
+        "AI provider '" .. name .. "' needs api = \"openai\" or \"anthropic\"",
+        vim.log.levels.WARN
+      )
+    end
+  end
+  return merged
+end
+
 -- Default configuration
 local default_config = {
-  provider = "minimax",
   num_suggestions = 3,
-  providers = {
-    minimax = {
-      env_key = "MINIMAX_API_KEY",
-      model = "MiniMax-M2.7",
-      endpoint = "https://api.minimax.io/anthropic/v1/messages",
-      max_tokens = 512,
-      -- Format request body for MiniMax API
-      format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
-        return vim.json.encode({
-          model = model,
-          max_tokens = max_tokens,
-          temperature = temperature,
-          system = system_prompt,
-          messages = {
-            { role = "user", content = { { type = "text", text = user_prompt } } },
-          },
-        })
-      end,
-      -- Get headers for MiniMax
-      get_headers = function(api_key)
-        return {
-          "-H", "Content-Type: application/json",
-          "-H", "x-api-key: " .. api_key,
-          "-H", "anthropic-version: 2023-06-01",
-        }
-      end,
-      -- Extract completion from MiniMax response
-      extract_completion = function(response)
-        if not response or type(response) ~= "table" then
-          return nil
-        end
-        for _, block in ipairs(response.content or {}) do
-          if block.type == "text" and block.text and block.text ~= "" then
-            return block.text
-          end
-        end
-        return nil
-      end,
-    },
-    openai = {
-      env_key = "OPENAI_API_KEY",
-      model = "gpt-4o",
-      endpoint = "https://api.openai.com/v1/chat/completions",
-      max_tokens = 512,
-      format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
-        return vim.json.encode({
-          model = model,
-          max_tokens = max_tokens,
-          temperature = temperature,
-          messages = {
-            { role = "system", content = system_prompt },
-            { role = "user", content = user_prompt },
-          },
-        })
-      end,
-      get_headers = function(api_key)
-        return {
-          "-H", "Content-Type: application/json",
-          "-H", "Authorization: Bearer " .. api_key,
-        }
-      end,
-      extract_completion = function(response)
-        if not response or type(response) ~= "table" then
-          return nil
-        end
-        local choice = response.choices and response.choices[1]
-        if choice and choice.message and choice.message.content then
-          return choice.message.content
-        end
-        return nil
-      end,
-    },
-    -- Generic Anthropic-compatible provider (for any API following Anthropic's format)
-    anthropic = {
-      env_key = "ANTHROPIC_API_KEY",
-      model = "claude-3-5-sonnet-20241022",
-      endpoint = "https://api.anthropic.com/v1/messages",
-      max_tokens = 512,
-      format_body = function(model, max_tokens, temperature, system_prompt, user_prompt)
-        return vim.json.encode({
-          model = model,
-          max_tokens = max_tokens,
-          temperature = temperature,
-          system = system_prompt,
-          messages = {
-            { role = "user", content = user_prompt },
-          },
-        })
-      end,
-      get_headers = function(api_key)
-        return {
-          "-H", "Content-Type: application/json",
-          "-H", "x-api-key: " .. api_key,
-          "-H", "anthropic-version: 2023-06-01",
-        }
-      end,
-      extract_completion = function(response)
-        if not response or type(response) ~= "table" then
-          return nil
-        end
-        for _, block in ipairs(response.content or {}) do
-          if block.type == "text" and block.text and block.text ~= "" then
-            return block.text
-          end
-        end
-        return nil
-      end,
-    },
-  },
 }
 
 -- Get effective configuration
 local function get_config()
   local user_config = vim.g.ai_completion or {}
   local config = vim.tbl_deep_extend("force", default_config, user_config)
+  config.providers = merge_providers(user_config.providers)
+  config.provider = config.provider or default_provider(config)
   return config
 end
 
 -- Get current provider configuration
 local function get_provider_config(config)
-  local provider_name = config.provider or "minimax"
+  local provider_name = config.provider or default_provider(config)
   local provider = config.providers and config.providers[provider_name]
   if not provider then
     vim.notify("AI provider '" .. provider_name .. "' not found in configuration", vim.log.levels.ERROR)
@@ -501,7 +567,11 @@ end
 
 -- Setup function to configure the module
 function M.setup(user_config)
-  vim.g.ai_completion = vim.tbl_deep_extend("force", default_config, user_config or {})
+  user_config = user_config or {}
+  local merged = vim.tbl_deep_extend("force", default_config, user_config)
+  merged.providers = merge_providers(user_config.providers)
+  merged.provider = merged.provider or default_provider(merged)
+  vim.g.ai_completion = merged
 end
 
 -- keymaps

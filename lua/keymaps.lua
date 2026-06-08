@@ -41,6 +41,13 @@ end
 -- LeetCode / DSA (leetcode.nvim)
 map("n", "<leader>lq", "<cmd>Leet<cr>", { desc = "LeetCode menu (DSA practice)" })
 
+-- CodeCompanion (chat, inline, action palette)
+map({ "n", "v" }, "<leader>aa", "<cmd>CodeCompanionActions<cr>", { desc = "AI action palette" })
+map({ "n", "v" }, "<leader>ac", "<cmd>CodeCompanionChat Toggle<cr>", { desc = "AI chat toggle" })
+map("v", "<leader>as", "<cmd>CodeCompanionChat Add<cr>", { desc = "Add selection to AI chat" })
+map({ "n", "v" }, "<leader>ai", "<cmd>CodeCompanion<cr>", { desc = "AI inline prompt" })
+vim.cmd([[cab cc CodeCompanion]])
+
 -- buffers
 map("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 map("n", "<S-l>", "<cmd>bnext<cr>", { desc = "Next buffer" })
