@@ -48,6 +48,37 @@ map("v", "<leader>as", "<cmd>CodeCompanionChat Add<cr>", { desc = "Add selection
 map({ "n", "v" }, "<leader>ai", "<cmd>CodeCompanion<cr>", { desc = "AI inline prompt" })
 vim.cmd([[cab cc CodeCompanion]])
 
+-- DAP debugging (Python, JS/TS, Java)
+local dap_ok, dap = pcall(require, "dap")
+if dap_ok then
+  map("n", "<leader>db", function() require("dap").toggle_breakpoint() end, { desc = "Debug: toggle breakpoint" })
+  map("n", "<leader>dB", function()
+    local input = vim.fn.input("Breakpoint condition: ")
+    if input ~= "" then
+      require("dap").set_breakpoint(input)
+    end
+  end, { desc = "Debug: conditional breakpoint" })
+  map("n", "<leader>dc", function() require("dap").continue() end, { desc = "Debug: continue / start" })
+  map("n", "<leader>di", function() require("dap").step_into() end, { desc = "Debug: step into" })
+  map("n", "<leader>do", function() require("dap").step_over() end, { desc = "Debug: step over" })
+  map("n", "<leader>dO", function() require("dap").step_out() end, { desc = "Debug: step out" })
+  map("n", "<leader>dt", function() require("dap").terminate() end, { desc = "Debug: terminate" })
+  map("n", "<leader>dr", function() require("dap").repl.toggle() end, { desc = "Debug: REPL toggle" })
+  map("n", "<leader>du", function()
+    local ok_ui, dapui = pcall(require, "dapui")
+    if ok_ui then
+      dapui.toggle({})
+    end
+  end, { desc = "Debug: UI toggle" })
+  map("n", "<leader>dd", function()
+    local ok_ui, dapui = pcall(require, "dapui")
+    if ok_ui then
+      dapui.open({})
+    end
+    require("dap").continue()
+  end, { desc = "Debug: start (open UI + continue)" })
+end
+
 -- buffers
 map("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 map("n", "<S-l>", "<cmd>bnext<cr>", { desc = "Next buffer" })

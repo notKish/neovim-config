@@ -18,6 +18,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 require("keymaps")
 require("lsp")
+require("dap_pack")
 -- After LspAttach is registered: mini.snippets attaches here so vim.lsp.completion.enable runs (:h lsp-completion).
 do
   local ok, err = pcall(require, "snippet_pack")
@@ -60,6 +61,8 @@ vim.api.nvim_create_autocmd("VimEnter", {
       lines[#lines + 1] = "  <leader>lq       LeetCode (DSA)"
       lines[#lines + 1] = "  <leader>ac       AI chat"
       lines[#lines + 1] = "  <leader>aa       AI actions"
+      lines[#lines + 1] = "  <leader>dd       Debug start"
+      lines[#lines + 1] = "  <leader>db       Debug breakpoint"
       vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
       vim.bo.modifiable = false
       vim.bo.bufhidden = "wipe"

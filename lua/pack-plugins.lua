@@ -52,6 +52,12 @@ local pack_ok, pack_err = pcall(vim.pack.add, {
   { src = gh("kawre/leetcode.nvim"), version = "HEAD" },
   -- AI chat, inline, agents (olimorris/codecompanion.nvim)
   { src = gh("olimorris/codecompanion.nvim"), version = vim.version.range("^19.0.0") },
+  -- Debugging (DAP): Python, JS/TS, Java (via jdtls)
+  { src = gh("nvim-neotest/nvim-nio"), version = "HEAD" },
+  { src = gh("mfussenegger/nvim-dap"), version = "HEAD" },
+  { src = gh("rcarriga/nvim-dap-ui"), version = "HEAD" },
+  { src = gh("mfussenegger/nvim-dap-python"), version = "HEAD" },
+  { src = gh("mx-mlc/nvim-dap-vscode-js"), version = "HEAD" },
 }, { confirm = false, load = true })
 if not pack_ok then
   vim.notify(

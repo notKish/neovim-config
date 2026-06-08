@@ -147,6 +147,12 @@ local function setup_jdtls_for_buffer(bufnr)
     cmd = cmd,
     root_dir = root_dir,
     capabilities = lsp_capabilities,
+    init_options = {
+      bundles = (function()
+        local ok, dap_pack = pcall(require, "dap_pack")
+        return ok and dap_pack.jdtls_bundles() or {}
+      end)(),
+    },
     settings = {
       java = {
         eclipse = { downloadSources = true },
