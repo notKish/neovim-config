@@ -1,7 +1,20 @@
 -- DAP debugging: Python, JS/TS, Java (jdtls).
--- Adapters are provided by Nix (~/.config/nix/modules/home/dap.nix) via NVIM_DAP_* env vars.
+-- Adapter paths come from Nix-generated ~/.local/share/nvim/dap_paths.lua (or NVIM_DAP_* env vars).
 -- Keymaps: <leader>d* (see keymaps.lua)
 local M = {}
+
+local nix_paths = (function()
+  local path = vim.fs.joinpath(vim.fn.stdpath("data"), "dap_paths.lua")
+  if vim.fn.filereadable(path) ~= 1 then
+    return {}
+  end
+  local ok, cfg = pcall(loadfile, path)
+  if not ok or type(cfg) ~= "function" then
+    return {}
+  end
+  local loaded_ok, loaded = pcall(cfg)
+  return loaded_ok and loaded or {}
+end)()
 
 local function env_path(name)
   local value = vim.env[name]
@@ -11,11 +24,36 @@ local function env_path(name)
   return nil
 end
 
-M.java_debug_dir = env_path("NVIM_DAP_JAVA_DEBUG_DIR")
-  or vim.fs.joinpath(vim.fn.stdpath("data"), "dap-adapters", "java-debug")
+local function resolve_path(nix_key, env_name, fallback)
+  local from_nix = nix_paths[nix_key]
+  if from_nix and from_nix ~= "" then
+    if nix_key == "java_debug_dir" then
+      if vim.fn.isdirectory(from_nix) == 1 then
+        return from_nix
+      end
+    elseif vim.fn.filereadable(from_nix) == 1 then
+      return from_nix
+    end
+  end
+
+  local from_env = env_path(env_name)
+  if from_env and from_env ~= "" then
+    return from_env
+  end
+
+  return fallback
+end
+
+local function java_debug_dir()
+  return resolve_path(
+    "java_debug_dir",
+    "NVIM_DAP_JAVA_DEBUG_DIR",
+    vim.fs.joinpath(vim.fn.stdpath("data"), "dap-adapters", "java-debug")
+  )
+end
 
 function M.jdtls_bundles()
-  local pattern = M.java_debug_dir .. "/com.microsoft.java.debug.plugin-*.jar"
+  local pattern = java_debug_dir() .. "/com.microsoft.java.debug.plugin-*.jar"
   local jars = vim.fn.glob(pattern, false, true)
   if type(jars) == "string" then
     jars = jars ~= "" and { jars } or {}
@@ -26,7 +64,7 @@ function M.jdtls_bundles()
 end
 
 local function notify_missing(msg)
-  vim.notify(msg .. "\nRebuild Nix config (~/.config/nix) to install DAP adapters.", vim.log.levels.WARN)
+  vim.notify(msg .. "\nRun: darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro", vim.log.levels.WARN)
 end
 
 local function setup_signs()
@@ -36,15 +74,17 @@ local function setup_signs()
 end
 
 local function python_executable()
-  local nix_python = env_path("NVIM_DAP_PYTHON")
-  if nix_python and vim.fn.filereadable(nix_python) == 1 then
-    return nix_python
+  local python = resolve_path("python", "NVIM_DAP_PYTHON", nil)
+  if python then
+    return python
   end
+
   local uv = vim.fn.exepath("uv")
   if uv ~= "" then
     return uv
   end
-  local python = vim.fn.exepath("python3")
+
+  python = vim.fn.exepath("python3")
   if python ~= "" then
     return python
   end
@@ -77,16 +117,16 @@ local function setup_js()
     return
   end
 
-  local js_server = env_path("NVIM_DAP_JS_DEBUG")
+  local js_server = resolve_path("js_debug", "NVIM_DAP_JS_DEBUG", nil)
   local js_opts = { adapters = { "pwa-node", "pwa-chrome" } }
 
-  if js_server and vim.fn.filereadable(js_server) == 1 then
+  if js_server then
     local node = vim.fn.exepath("node")
     js_opts.debugger_cmd = { node ~= "" and node or "node", js_server }
   else
     local js_debug_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "dap-adapters", "js-debug")
     if vim.fn.isdirectory(js_debug_dir) == 0 then
-      notify_missing("JS debugger not found (set NVIM_DAP_JS_DEBUG or install manually)")
+      notify_missing("JS debugger not found")
       return
     end
     js_opts.debugger_path = js_debug_dir
@@ -122,7 +162,7 @@ end
 local function setup_java()
   local bundles = M.jdtls_bundles()
   if #bundles == 0 then
-    notify_missing("Java debug bundles not found in " .. M.java_debug_dir)
+    notify_missing("Java debug bundles not found in " .. java_debug_dir())
     return
   end
 
@@ -188,17 +228,15 @@ function M.setup()
       debugpy_ok = vim.fn.system({ python, "-c", "import debugpy" }) == ""
     end
 
-    local js_server = env_path("NVIM_DAP_JS_DEBUG")
-    local js_status = "missing — rebuild Nix config"
-    if js_server and vim.fn.filereadable(js_server) == 1 then
-      js_status = js_server
-    end
+    local js_server = resolve_path("js_debug", "NVIM_DAP_JS_DEBUG", nil)
+    local js_status = js_server or "missing — rebuild Nix config"
 
     local lines = {
       "DAP adapter status:",
       ("  Python: %s (%s)"):format(python, debugpy_ok and "debugpy ok" or "debugpy missing"),
-      ("  Java bundles: %d jar(s) in %s"):format(#M.jdtls_bundles(), M.java_debug_dir),
+      ("  Java bundles: %d jar(s) in %s"):format(#M.jdtls_bundles(), java_debug_dir()),
       ("  JS debugger: %s"):format(js_status),
+      ("  dap_paths.lua: %s"):format(nix_paths.python and "loaded" or "missing — rebuild Nix config"),
     }
     vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO)
   end, { desc = "Check DAP adapter installation" })
