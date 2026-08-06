@@ -67,6 +67,58 @@ local function notify_missing(msg)
   vim.notify(msg .. "\nRun: darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro", vim.log.levels.WARN)
 end
 
+local project_root_markers = {
+  ".git",
+  "package.json",
+  "pom.xml",
+  "mvnw",
+  "gradlew",
+  "build.gradle",
+  "build.gradle.kts",
+  "settings.gradle",
+  "settings.gradle.kts",
+}
+
+local function project_root(start)
+  if type(start) == "string" and start ~= "" then
+    local root = vim.fs.root(start, project_root_markers)
+    if root then
+      return root
+    end
+  end
+  local dir = vim.fn.getcwd()
+  while dir and dir ~= "" and dir ~= "/" do
+    for _, marker in ipairs(project_root_markers) do
+      if vim.fn.filereadable(vim.fs.joinpath(dir, marker)) == 1 or vim.fn.isdirectory(vim.fs.joinpath(dir, marker)) == 1 then
+        return dir
+      end
+    end
+    dir = vim.fs.dirname(dir)
+  end
+  return vim.fn.getcwd()
+end
+
+function M.launch_json_path()
+  local root = project_root(vim.api.nvim_buf_get_name(0))
+  return vim.fs.joinpath(root, ".vscode", "launch.json")
+end
+
+local function setup_launch_json()
+  local dap = require("dap")
+  dap.providers.configs["dap.launch.json"] = function()
+    local path = M.launch_json_path()
+    if vim.fn.filereadable(path) ~= 1 then
+      return {}
+    end
+    local ok, configs = pcall(require("dap.ext.vscode").getconfigs, path)
+    if not ok then
+      vim.notify("launch.json error: " .. tostring(configs), vim.log.levels.WARN)
+      return {}
+    end
+    return configs
+  end
+end
+
 local function setup_signs()
   vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "DiagnosticError", linehl = "", numhl = "" })
   vim.fn.sign_define("DapBreakpointCondition", { text = "◆", texthl = "DiagnosticWarn", linehl = "", numhl = "" })
@@ -215,9 +267,22 @@ function M.setup()
 
   setup_signs()
   setup_ui()
+  setup_launch_json()
   setup_python()
   setup_js()
   setup_java()
+
+  vim.api.nvim_create_user_command("DapLaunchJson", function()
+    local path = M.launch_json_path()
+    local dir = vim.fs.dirname(path)
+    if vim.fn.isdirectory(dir) == 0 then
+      vim.fn.mkdir(dir, "p")
+    end
+    if vim.fn.filereadable(path) ~= 1 then
+      vim.notify("Creating " .. path .. " — see doc/dap-debugging-guide.txt for templates", vim.log.levels.INFO)
+    end
+    vim.cmd.edit(path)
+  end, { desc = "Open or create .vscode/launch.json for this project" })
 
   vim.api.nvim_create_user_command("DapHealth", function()
     local python = python_executable()
@@ -231,12 +296,16 @@ function M.setup()
     local js_server = resolve_path("js_debug", "NVIM_DAP_JS_DEBUG", nil)
     local js_status = js_server or "missing — rebuild Nix config"
 
+    local launch_json = M.launch_json_path()
+    local launch_status = vim.fn.filereadable(launch_json) == 1 and launch_json or "not found (use :DapLaunchJson)"
+
     local lines = {
       "DAP adapter status:",
       ("  Python: %s (%s)"):format(python, debugpy_ok and "debugpy ok" or "debugpy missing"),
       ("  Java bundles: %d jar(s) in %s"):format(#M.jdtls_bundles(), java_debug_dir()),
       ("  JS debugger: %s"):format(js_status),
       ("  dap_paths.lua: %s"):format(nix_paths.python and "loaded" or "missing — rebuild Nix config"),
+      ("  launch.json: %s"):format(launch_status),
     }
     vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO)
   end, { desc = "Check DAP adapter installation" })

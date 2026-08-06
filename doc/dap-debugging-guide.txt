@@ -1,0 +1,559 @@
+================================================================================
+                    NEOVIM DAP DEBUGGING GUIDE
+         Spring Boot · TypeScript/JS Backend · React
+================================================================================
+
+This guide covers debugging in this Neovim setup using nvim-dap, nvim-dap-ui,
+nvim-jdtls (Java), and nvim-dap-vscode-js (Node/Chrome).
+
+Leader key is SPACE. All debug keymaps use <leader>d*.
+
+================================================================================
+
+1. PREREQUISITES
+
+Before debugging any project, confirm adapters are installed:
+
+    :DapHealth
+
+You should see:
+  - Python: debugpy ok          (for Python scripts; not needed for Java/JS)
+  - Java bundles: 1 jar(s)      (Spring Boot / Java)
+  - JS debugger: /nix/store/... (Node / React in browser)
+  - dap_paths.lua: loaded
+
+If anything is missing:
+
+    rebuild
+    # or: sudo darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro
+
+Restart Neovim after rebuild.
+
+Open Neovim from the PROJECT ROOT (where pom.xml, build.gradle, or package.json
+lives). nvim-dap uses ${workspaceFolder} — usually the directory you launched
+Neovim from, or the git root.
+
+================================================================================
+
+2. KEYMAPS (QUICK REFERENCE)
+
+    <leader>dd    Start debugging (opens DAP UI + pick config + run)
+    <leader>dc    Continue / start (pick config if not running)
+    <leader>db    Toggle breakpoint on current line
+    <leader>dB    Conditional breakpoint (prompts for expression)
+    <leader>do    Step over
+    <leader>di    Step into
+    <leader>dO    Step out
+    <leader>dt    Terminate session
+    <leader>du    Toggle DAP UI (variables, stack, watches)
+    <leader>dr    Toggle DAP REPL
+
+Visual cues:
+  ●  red dot     = breakpoint
+  ◆  diamond     = conditional breakpoint
+  ▶  arrow        = current execution line when paused
+
+When paused, the DAP UI opens automatically (scopes, stack trace, watches).
+Use the UI buttons or the keymaps above to step.
+
+================================================================================
+
+3. HOW A DEBUG SESSION WORKS
+
+1. Set breakpoints (<leader>db) in source files.
+2. Press <leader>dd (or <leader>dc).
+3. If multiple configs exist, pick one from the prompt.
+4. The app starts (or attaches). Execution stops at breakpoints.
+5. Inspect variables in the DAP UI sidebar.
+6. Step with <leader>do / <leader>di / <leader>dO.
+7. Stop with <leader>dt.
+
+Built-in configs (no launch.json required) are listed in section 7.
+For real projects you will almost always want a project .vscode/launch.json.
+
+================================================================================
+
+4. SPRING BOOT (JAVA)
+
+4.1 WHAT IS ALREADY CONFIGURED
+
+  - jdtls starts automatically when you open a .java file.
+  - Project root is detected via: pom.xml, mvnw, build.gradle, gradlew,
+    settings.gradle(.kts).
+  - Java debug bundles are loaded from Nix (via dap_paths.lua).
+  - jdtls registers a "java" debug adapter with nvim-dap.
+
+4.2 FIRST-TIME SETUP (PER PROJECT)
+
+  1. cd /path/to/spring-boot-project
+  2. nvim .
+  3. Open src/main/java/.../YourApplication.java (the @SpringBootApplication class).
+  4. Wait for jdtls to finish indexing (watch :LspInfo — jdtls should be "running").
+     Large projects can take 1–3 minutes on first open.
+  5. Run :DapHealth — Java bundles must show 1+ jar(s).
+
+4.3 DEBUG A SPRING BOOT APP (AUTO-DISCOVER MAIN CLASS)
+
+  1. Set breakpoints in controllers, services, etc. (<leader>db).
+  2. Run :JdtRefreshDebugConfigs
+     (asks jdtls to scan for main classes — includes @SpringBootApplication).
+  3. Press <leader>dd.
+  4. Pick the launch config for your main class, e.g.:
+       Launch com.example.demo.DemoApplication
+  5. App starts; execution stops at breakpoints.
+
+If no Java configs appear:
+  - jdtls may still be indexing — wait, then :JdtRefreshDebugConfigs again.
+  - Ensure the project compiles: ./mvnw compile  or  ./gradlew classes
+  - Check :messages for jdtls errors.
+
+4.4 DEBUG WITH launch.json (RECOMMENDED FOR TEAMS)
+
+Create .vscode/launch.json in the project root. nvim-dap loads it automatically
+when you press <leader>dd — no extra Neovim config or commands needed.
+
+Quick way to create/edit it from Neovim:
+
+    :DapLaunchJson
+
+Or manually:
+
+    mkdir -p .vscode
+    nvim .vscode/launch.json
+
+Example for Spring Boot:
+
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "java",
+          "name": "Spring Boot (DemoApplication)",
+          "request": "launch",
+          "mainClass": "com.example.demo.DemoApplication",
+          "projectName": "demo"
+        },
+        {
+          "type": "java",
+          "name": "Spring Boot (current file)",
+          "request": "launch",
+          "mainClass": "${file}"
+        }
+      ]
+    }
+
+Replace mainClass and projectName with your values. projectName is usually the
+artifactId (Maven) or root project name (Gradle) — check settings.gradle or pom.xml.
+
+Then <leader>dd and pick "Spring Boot (DemoApplication)" from the list.
+
+Verify nvim-dap sees the file:
+
+    :DapHealth
+    " launch.json line should show the full path, not "not found"
+
+4.5 ATTACH TO A RUNNING SPRING BOOT PROCESS (REMOTE DEBUG)
+
+Start the app with JDWP enabled. Example Maven:
+
+    ./mvnw spring-boot:run \
+      -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+
+Or Gradle:
+
+    ./gradlew bootRun --debug-jvm
+
+Add to .vscode/launch.json:
+
+    {
+      "type": "java",
+      "name": "Attach to Spring Boot :5005",
+      "request": "attach",
+      "hostName": "127.0.0.1",
+      "port": 5005
+    }
+
+Workflow:
+  1. Start the app in a terminal with JDWP (port 5005).
+  2. Set breakpoints in Neovim.
+  3. <leader>dd → pick "Attach to Spring Boot :5005".
+
+4.6 DEBUG JUnit TESTS (OPTIONAL)
+
+Running individual @Test methods from the debugger requires the vscode-java-test
+bundle (not installed by default in this setup). You can still:
+  - Run tests in a terminal and use attach debugging, or
+  - Set breakpoints and run tests via Maven/Gradle while attached.
+
+4.7 SPRING BOOT TIPS
+
+  - Lombok: jdtls auto-finds lombok.jar from ~/.m2 if present.
+  - DevTools restart: after a hot restart, you may need to re-attach or re-launch.
+  - Multi-module projects: use projectName in launch.json matching the module
+    that contains the main class.
+  - If "Could not find or load main class": run ./mvnw compile first; ensure
+    jdtls finished indexing.
+
+================================================================================
+
+5. TYPESCRIPT / JAVASCRIPT BACKEND (NODE)
+
+5.1 WHAT IS ALREADY CONFIGURED
+
+Built-in configs (no launch.json):
+
+  - "Node: current file"   — runs the open .ts/.js file with node
+  - "Node: npm test"       — runs `npm test`
+
+These work for quick scripts but NOT for typical backends (Express, Fastify,
+NestJS, Hono, etc.) that use npm scripts, tsx, or compiled dist/.
+
+5.2 ADD launch.json TO YOUR BACKEND PROJECT
+
+  1. cd /path/to/backend && nvim .
+  2. :DapLaunchJson          " creates/opens .vscode/launch.json
+  3. Paste one of the templates below and save.
+  4. Set breakpoints, then <leader>dd and pick your config.
+
+Example — Express / Fastify with tsx (Vite-style TS backend):
+
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "pwa-node",
+          "request": "launch",
+          "name": "Debug API (tsx)",
+          "runtimeExecutable": "npx",
+          "runtimeArgs": ["tsx", "watch", "src/index.ts"],
+          "cwd": "${workspaceFolder}",
+          "console": "integratedTerminal",
+          "sourceMaps": true,
+          "skipFiles": ["<node_internals>/**"]
+        }
+      ]
+    }
+
+Example — NestJS (uses npm run start:debug):
+
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "pwa-node",
+          "request": "launch",
+          "name": "NestJS debug",
+          "runtimeExecutable": "npm",
+          "runtimeArgs": ["run", "start:debug"],
+          "cwd": "${workspaceFolder}",
+          "console": "integratedTerminal",
+          "sourceMaps": true,
+          "skipFiles": ["<node_internals>/**"]
+        }
+      ]
+    }
+
+Example — plain Node running compiled JS:
+
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "pwa-node",
+          "request": "launch",
+          "name": "Debug dist/server.js",
+          "program": "${workspaceFolder}/dist/server.js",
+          "cwd": "${workspaceFolder}",
+          "console": "integratedTerminal",
+          "sourceMaps": true
+        }
+      ]
+    }
+
+Workflow:
+  1. cd /path/to/backend && nvim .
+  2. :DapLaunchJson — paste a template, save.
+  3. Set breakpoints in .ts / .js handlers.
+  4. <leader>dd → pick your config (e.g. "NestJS debug").
+
+5.3 ATTACH TO A RUNNING NODE PROCESS
+
+Useful when the server is already running (docker, tmux, separate terminal).
+
+Start node with inspect:
+
+    node --inspect-brk=9229 dist/server.js
+    # or: NODE_OPTIONS='--inspect-brk=9229' npm run dev
+
+launch.json:
+
+    {
+      "type": "pwa-node",
+      "request": "attach",
+      "name": "Attach Node :9229",
+      "port": 9229,
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+
+Workflow:
+  1. Start server with --inspect in a terminal.
+  2. Set breakpoints.
+  3. <leader>dd → "Attach Node :9229".
+
+Or pick a process interactively (no launch.json):
+
+    :lua require('dap').configurations.typescript = {
+      {
+        type = "pwa-node",
+        request = "attach",
+        name = "Attach to process",
+        processId = require("dap.utils").pick_process,
+      },
+    }
+    " Press <leader>dd and pick "Attach to process"
+
+5.4 TS/JS BACKEND TIPS
+
+  - sourceMaps: true is important when debugging TypeScript.
+  - skipFiles: ["<node_internals>/**"] avoids stepping into Node internals.
+  - cwd must be the project root (where package.json lives).
+  - If breakpoints stay grey/unbound: ensure the running code matches the source
+    (rebuild TS, or use tsx/ts-node with source maps enabled).
+
+================================================================================
+
+6. REACT (BROWSER DEBUGGING)
+
+6.1 WHAT IS ALREADY CONFIGURED
+
+The JS adapter registers pwa-chrome (debug in Chrome/Chromium). React runs in
+the browser, so you debug the frontend via the browser devtools protocol — not
+by running a .tsx file with node.
+
+6.2 TYPICAL WORKFLOW (VITE / CRA / NEXT DEV SERVER)
+
+  1. Start the dev server in a terminal:
+       npm run dev          # Vite → usually http://localhost:5173
+       npm start            # CRA  → usually http://localhost:3000
+
+  2. cd project && nvim .
+
+  3. :DapLaunchJson — paste one of the templates below, save.
+
+  4. Set breakpoints in .tsx / .jsx / .ts files (components, hooks, handlers).
+
+  5. <leader>dd → pick your config (e.g. "React (Chrome) — Vite").
+
+  6. Chrome opens. Interact with the UI; breakpoints hit on events, renders, etc.
+
+  Templates for .vscode/launch.json:
+
+    --- Vite + React ---
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "pwa-chrome",
+          "request": "launch",
+          "name": "React (Chrome) — Vite",
+          "url": "http://localhost:5173",
+          "webRoot": "${workspaceFolder}/src",
+          "sourceMapPathOverrides": {
+            "webpack:///src/*": "${webRoot}/*"
+          }
+        }
+      ]
+    }
+
+    --- Create React App ---
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "pwa-chrome",
+          "request": "launch",
+          "name": "React (Chrome) — CRA",
+          "url": "http://localhost:3000",
+          "webRoot": "${workspaceFolder}/src"
+        }
+      ]
+    }
+
+    --- Attach to already-open Chrome tab ---
+    {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "pwa-chrome",
+          "request": "attach",
+          "name": "Attach Chrome",
+          "port": 9222,
+          "webRoot": "${workspaceFolder}/src"
+        }
+      ]
+    }
+
+6.3 DEBUGGING REACT-SPECIFIC CODE
+
+  - Event handlers: breakpoint inside onClick, onSubmit, etc.
+  - useEffect: breakpoint inside the effect callback.
+  - Custom hooks: breakpoint inside the hook body.
+  - React Query / Redux: breakpoint in queryFn, reducer, or selector.
+
+  Note: breakpoints in JSX return lines can be unreliable — prefer breakpoints
+  in the function body above the return.
+
+6.4 REACT + FULLSTACK (API + UI)
+
+Use TWO configs in launch.json — one pwa-node for API, one pwa-chrome for UI.
+Launch the API first, then the browser config. Or run API in a terminal and
+only debug the frontend in Chrome.
+
+6.5 REACT TIPS
+
+  - Dev server must be running BEFORE you launch the Chrome debug config.
+  - webRoot should point to where your source lives (often src/).
+  - For path aliases (@/components/...), source maps usually handle it; if
+    breakpoints don't bind, check vite.config.ts sourcemap: true.
+  - Google Chrome must be installed (available on this machine via Homebrew cask).
+
+================================================================================
+
+7. BUILT-IN CONFIGS (NO launch.json)
+
+These are defined in ~/.config/nvim/lua/dap_pack.lua:
+
+  Python
+    - Python: current file
+    - (plus defaults from nvim-dap-python: file, file:args, attach, doctest)
+
+  JavaScript / TypeScript / TSX / JSX
+    - Node: current file
+    - Node: npm test
+
+  Java
+    - Auto-discovered main classes (via jdtls + :JdtRefreshDebugConfigs)
+    - Entries in .vscode/launch.json (loaded automatically on <leader>dd)
+
+================================================================================
+
+8. HOW launch.json IS LOADED
+
+You do NOT need :lua require('dap.ext.vscode').load_launchjs() — that command is
+deprecated in nvim-dap 0.12+.
+
+Instead:
+  1. Put .vscode/launch.json in the project root (git root, or where pom.xml /
+     package.json lives).
+  2. Press <leader>dd — configs from launch.json appear in the picker alongside
+     built-in configs.
+
+Useful commands:
+  :DapLaunchJson    Open or create .vscode/launch.json for the current project
+  :DapHealth        Shows whether launch.json was found and adapter status
+
+launch.json is discovered by walking up from the current directory to the
+project root (looks for .git, package.json, pom.xml, gradle files, etc.).
+
+Adapter type mapping:
+  - "java"       → Java / Spring Boot (jdtls)
+  - "pwa-node"   → Node / TS backend
+  - "pwa-chrome" → React in browser
+
+================================================================================
+
+9. EXAMPLE: END-TO-END SPRING BOOT SESSION
+
+    cd ~/projects/order-service
+    nvim .
+
+    " Wait for jdtls (open a .java file, check :LspInfo)
+
+    " Create .vscode/launch.json
+    :DapLaunchJson
+    " Paste Spring Boot template, save
+
+    " Set breakpoint in OrderController.java
+    " Normal mode, line with handleOrder():  <leader>db
+
+    :JdtRefreshDebugConfigs
+    <leader>dd
+    " Pick: Launch com.example.orders.OrderApplication
+
+    " In another terminal (or use curl):
+    curl http://localhost:8080/orders/1
+
+    " Neovim stops at breakpoint. Inspect `order` in DAP UI.
+    <leader>do    " step over
+    <leader>dt    " stop debugging
+
+================================================================================
+
+10. EXAMPLE: END-TO-END REACT (VITE) SESSION
+
+    cd ~/projects/my-ui
+    npm run dev          " terminal 1 — leave running
+
+    nvim .               " terminal 2
+
+    :DapLaunchJson
+    " Paste Vite + React template from section 6.2, save
+
+    " App.tsx — breakpoint in a button handler
+    <leader>db
+
+    <leader>dd
+    " Pick: React (Chrome) — Vite
+
+    " Chrome opens → click the button → breakpoint hits in Neovim
+
+================================================================================
+
+11. TROUBLESHOOTING
+
+:DapHealth shows missing adapters
+  → rebuild Nix config, restart Neovim.
+
+Java: no launch configs / empty picker
+  → Wait for jdtls indexing. :JdtRefreshDebugConfigs. Compile project.
+
+Java: Could not find or load main class
+  → ./mvnw compile. Check mainClass in launch.json. Check projectName.
+
+JS: breakpoints not hitting
+  → sourceMaps: true. Match cwd. Rebuild TS. Try skipFiles.
+
+JS: Debugger entrypoint not found
+  → :DapHealth — JS debugger path must be set. Rebuild Nix.
+
+React: Chrome opens but breakpoints grey
+  → Dev server running? Correct url in launch.json? webRoot = src/?
+
+Grey/unfilled breakpoint icon
+  → Debugger not running, or source not loaded yet. Start session first.
+
+Multiple configs — wrong one launches
+  → Name configs clearly in launch.json. Pick carefully at prompt.
+
+DAP UI didn't open
+  → <leader>du to toggle manually.
+
+================================================================================
+
+12. FURTHER READING
+
+  :help dap
+  :help dap-configuration
+  nvim-jdtls: https://github.com/mfussenegger/nvim-jdtls
+  nvim-dap-vscode-js: https://github.com/mxsdev/nvim-dap-vscode-js
+  vscode-js-debug options: https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md
+
+Config files in this setup:
+  ~/.config/nvim/lua/dap_pack.lua       — DAP adapters + default configs
+  ~/.config/nvim/lua/keymaps.lua        — <leader>d* keymaps
+  ~/.config/nvim/lua/lsp.lua            — jdtls + java-debug bundles
+  ~/.config/nix/modules/home/dap.nix    — Nix-managed adapter paths
+  ~/.local/share/nvim/dap_paths.lua     — generated store paths (do not edit)
+
+================================================================================
