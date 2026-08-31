@@ -33,7 +33,7 @@ require("terminal")
 -- mini.pick for file finder UI (replaces vim.ui.select with fuzzy picker)
 require("pick_pack")
 require("leetcode_pack")
-
+-- require("fundamentals")
 -- Better startup screen when no files are opened
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
