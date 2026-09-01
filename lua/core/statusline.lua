@@ -1,14 +1,34 @@
 local M = {}
 
+-- Git branch/dirty state used to spawn two `git` subprocesses on every statusline
+-- evaluation (i.e. every redraw — cursor move, scroll, mode change), blocking the
+-- UI ~27ms each time and more in large repos. Cache it: refresh at most every
+-- GIT_TTL ms, plus on FocusGained/DirChanged (user-initiated, rare) so state is
+-- current when it matters. Staleness is bounded by GIT_TTL.
+local GIT_TTL = 5000
+local git_cache = {
+  at = 0,
+  branch = "",
+  dirty = false,
+}
+
+local function refresh_git()
+  git_cache.branch = vim.fn.system("git branch --show-current 2>/dev/null"):gsub("\n", "")
+  git_cache.dirty = vim.fn.system("git status --porcelain 2>/dev/null") ~= ""
+  git_cache.at = vim.uv.now()
+end
+
 local function get_git_branch()
-  local branch = vim.fn.system("git branch --show-current 2>/dev/null"):gsub("\n", "")
-  if branch == "" then
+  if vim.uv.now() - git_cache.at >= GIT_TTL then
+    refresh_git()
+  end
+  if git_cache.branch == "" then
     return ""
   end
-  local status = vim.fn.system("git status --porcelain 2>/dev/null")
-  local dirty = status ~= ""
-  return dirty and (branch .. "± ") or (branch .. " ")
+  return git_cache.dirty and (git_cache.branch .. "± ") or (git_cache.branch .. " ")
 end
+
+vim.api.nvim_create_autocmd({ "FocusGained", "DirChanged" }, { callback = refresh_git })
 
 local function get_mode()
   local mode = vim.api.nvim_get_mode().mode
