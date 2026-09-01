@@ -1,4 +1,4 @@
--- mini.snippets + friendly-snippets (vim.pack). Load after lua/lsp.lua so LspAttach runs when this attaches.
+-- mini.snippets + friendly-snippets (vim.pack). Load after lua/core/lsp.lua so LspAttach runs when this attaches.
 -- Autotrigger only fires for LSP triggerCharacters; mini defaults to {} so we register alnum (|:h lsp-completion|).
 local mini_snippets = require("mini.snippets")
 

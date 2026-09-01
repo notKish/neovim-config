@@ -2,7 +2,7 @@
 --
 -- Provider selection (pick one):
 --   1. vim.g.codecompanion.adapter = "deepseek"   — CodeCompanion-only override
---   2. vim.g.ai_completion.provider = "deepseek"  — shared with <C-a> completion (lua/ai.lua)
+--   2. vim.g.ai_completion.provider = "deepseek"  — shared with <C-a> completion (lua/plugins/ai.lua)
 --   3. Auto: first provider in vim.g.ai_completion.providers with a set API key
 --
 -- Add providers under vim.g.ai_completion.providers (same table as ai.lua):
@@ -20,7 +20,7 @@
 --   }
 --
 -- At runtime, switch adapter in chat: :CodeCompanionChat adapter=openai
-local ai = require("ai")
+local ai = require("plugins.ai")
 
 local function active_adapter(config)
   local cc = vim.g.codecompanion or {}

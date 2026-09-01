@@ -149,8 +149,8 @@ local function setup_jdtls_for_buffer(bufnr)
     capabilities = lsp_capabilities,
     init_options = {
       bundles = (function()
-        local ok, dap_pack = pcall(require, "dap_pack")
-        return ok and dap_pack.jdtls_bundles() or {}
+        local ok, dap = pcall(require, "plugins.dap")
+        return ok and dap.jdtls_bundles() or {}
       end)(),
     },
     settings = {

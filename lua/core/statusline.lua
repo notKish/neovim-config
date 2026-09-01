@@ -305,9 +305,9 @@ function M.bufferline()
   return table.concat(buffers) .. "%#TabLineFill#"
 end
 
-vim.o.tabline = "%!v:lua.require('statusline').bufferline()"
+vim.o.tabline = "%!v:lua.require('core.statusline').bufferline()"
 vim.o.showtabline = 2
 
-vim.o.statusline = "%!v:lua.require('statusline').statusline()"
+vim.o.statusline = "%!v:lua.require('core.statusline').statusline()"
 
 return M

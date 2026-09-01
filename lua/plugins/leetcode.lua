@@ -1,8 +1,8 @@
 -- kawre/leetcode.nvim — LeetCode / DSA practice inside Neovim (:Leet)
--- Requires pick_pack.lua first so mini.pick registers :Pick (leetcode.nvim mini-picker).
+-- Requires lua/plugins/pick.lua first so mini.pick registers :Pick (leetcode.nvim mini-picker).
 --
 -- Default plugin theme uses Conceal for body text + NormalFloat window → grey on grey on retrobox.
--- Overrides use the same palette as lua/highlights.lua (retrobox).
+-- Overrides use the same palette as lua/core/highlights.lua (retrobox).
 local lc_fg = "#ebdbb2"
 local lc_muted = "#bdae93"
 local lc_comment = "#928374"
