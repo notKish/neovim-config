@@ -174,6 +174,63 @@ local function setup_jdtls_for_buffer(bufnr)
   })
 end
 
+-- arduino-language-server: manual per-buffer start like jdtls because the FQBN
+-- (board) is per-project and unknown until a sketch is opened. ALS 0.7.7 flags:
+-- -clangd -cli [-cli-config] -fqbn (it manages its own temp build dir; it does not
+-- read sketch.yaml, so we resolve the FQBN here via plugins.arduino).
+local function setup_arduino_for_buffer(bufnr)
+  local filename = vim.api.nvim_buf_get_name(bufnr)
+  if filename == "" then
+    return
+  end
+
+  local ok, arduino = pcall(require, "plugins.arduino")
+  if not ok then
+    return
+  end
+  local root_dir = arduino.project_root(filename)
+  if not root_dir then
+    vim.notify("Could not detect Arduino sketch root (no .ino/sketch.yaml/.fqbn)", vim.log.levels.WARN)
+    return
+  end
+
+  local als = vim.fn.exepath("arduino-language-server")
+  local cli = vim.fn.exepath("arduino-cli")
+  local clangd = vim.fn.exepath("clangd")
+  if als == "" or cli == "" or clangd == "" then
+    vim.notify(
+      "arduino toolchain missing. Run: darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro",
+      vim.log.levels.WARN
+    )
+    return
+  end
+
+  local fqbn = arduino.fqbn(root_dir)
+  if not fqbn then
+    vim.notify("No FQBN set — use :ArduinoBoard to pick one", vim.log.levels.WARN)
+    return
+  end
+
+  local cmd = {
+    "arduino-language-server",
+    "-clangd", clangd,
+    "-cli", cli,
+    "-fqbn", fqbn,
+  }
+  local cli_config = vim.fs.joinpath(vim.env.HOME or "", ".arduino15", "arduino-cli.yaml")
+  if vim.fn.filereadable(cli_config) == 1 then
+    cmd[#cmd + 1] = "-cli-config"
+    cmd[#cmd + 1] = cli_config
+  end
+
+  vim.lsp.start({
+    name = "arduino_language_server",
+    cmd = cmd,
+    root_dir = root_dir,
+    capabilities = lsp_capabilities,
+  })
+end
+
 -- Language servers often advertise only "." "(" etc. as triggerCharacters. Neovim autotrigger only
 -- queries clients registered for the typed key (:h lsp-completion), so without this, "def" only
 -- hits mini.snippets — Pyright never runs until <C-Space> (Invoked). Merge identifier chars first.
@@ -421,6 +478,13 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = "java",
   callback = function(args)
     setup_jdtls_for_buffer(args.buf)
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "arduino",
+  callback = function(args)
+    setup_arduino_for_buffer(args.buf)
   end,
 })
 

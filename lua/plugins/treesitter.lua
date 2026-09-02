@@ -47,13 +47,16 @@ local ts_filetypes = {
   "toml",
   "c",
   "cpp",
+  "arduino",
   "vim",
   "vimdoc",
 }
 vim.api.nvim_create_autocmd("FileType", {
   pattern = ts_filetypes,
   callback = function(ev)
-    pcall(vim.treesitter.start, ev.buf)
+    -- .ino/.pde buffers get filetype `arduino`, but the C++ parser handles them.
+    local lang = ev.ft == "arduino" and "cpp" or nil
+    pcall(vim.treesitter.start, ev.buf, lang)
     if vim.bo[ev.buf].indentexpr == "" then
       vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
     end

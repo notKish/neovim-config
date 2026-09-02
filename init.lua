@@ -20,6 +20,8 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 require("core.keymaps")
 require("core.lsp")
 require("plugins.dap")
+-- Arduino workflow: compile/upload/monitor via arduino-cli (:Arduino* commands)
+require("plugins.arduino")
 -- After LspAttach is registered: mini.snippets attaches here so vim.lsp.completion.enable runs (:h lsp-completion).
 do
   local ok, err = pcall(require, "plugins.snippet")

@@ -1,0 +1,131 @@
+================================================================================
+                    ARDUINO GUIDE
+         Compile · Upload · Serial Monitor · Language Server
+================================================================================
+
+This guide covers Arduino sketch development in this Neovim setup using
+arduino-cli and arduino-language-server (ALS). No Arduino IDE needed.
+
+Leader key is SPACE. Compile entry point is :make; everything else uses the
+:Arduino* commands.
+
+================================================================================
+
+1. PREREQUISITES
+
+Install the toolchain (once, via Nix):
+
+    sudo darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro
+
+This provides arduino-cli and arduino-language-server on PATH. Restart Neovim
+after rebuilding.
+
+Check status from inside Neovim:
+
+    :ArduinoHealth
+
+Install board cores (downloads to ~/.arduino15; the Arduino AVR family covers
+Uno/Nano/Mega/Leonardo):
+
+    arduino-cli config init
+    arduino-cli core update-index
+    arduino-cli core install arduino:avr
+
+Other families (ESP32, RP2040, STM32, ...) use their own core URLs — see
+`arduino-cli core search <board>` and add the URL with `arduino-cli config
+add board_manager.additional_urls <url>`.
+
+================================================================================
+
+2. PROJECT LAYOUT
+
+A sketch is a folder containing a .ino file with the same name (plus optional
+src/ and library dependencies):
+
+    Blink/
+      Blink.ino
+      src/          (optional extra .cpp/.h files)
+
+Open any .ino file and Neovim:
+  - sets filetype `arduino` (built-in detection; treesitter cpp parser + indent)
+  - starts the arduino-language-server for go-to-def, hover, completion,
+    diagnostics (needs an FQBN — see next section)
+  - sets 'makeprg' so :make compiles with errors in the quickfix list
+
+================================================================================
+
+3. BOARD SELECTION (FQBN)
+
+The FQBN (fully-qualified board name, e.g. arduino:avr:uno) is per-project.
+Resolution order:
+
+  1. sketch.yaml `default_fqbn` (recommended — version this file)
+  2. a project-local .fqbn file (written by :ArduinoBoard)
+  3. an interactive prompt on first use (persisted to .fqbn)
+
+Pick a board from the full list:
+
+    :ArduinoBoard
+
+or write sketch.yaml yourself (also sets the serial port and baud rate):
+
+    # sketch.yaml
+    default_fqbn: arduino:avr:uno
+    default_port: /dev/cu.usbmodem14101
+    default_baudrate: 115200
+
+Without an FQBN, ALS will not start and :make compiles without board-specific
+flags. Run :ArduinoBoard once per project.
+
+================================================================================
+
+4. COMPILE
+
+    :make          # or :ArduinoCompile — same thing; errors land in quickfix
+    :copen         # open quickfix if needed (also opened automatically)
+
+Arduino-cli output is parsed with a clang-style errorformat, so you can jump
+between errors with ]q / [q (quickfix navigation).
+
+================================================================================
+
+5. UPLOAD
+
+Connect the board, then:
+
+    :ArduinoUpload
+
+Port resolution: sketch.yaml `default_port` → first board found by
+`arduino-cli board list` → interactive prompt. Upload output goes to the
+quickfix list. If the port is missing, set default_port in sketch.yaml.
+
+================================================================================
+
+6. SERIAL MONITOR
+
+    :ArduinoMonitor
+
+Opens a bottom terminal split running `arduino-cli monitor` at the resolved
+port and baud rate (115200 default; override with default_baudrate in
+sketch.yaml). Exit terminal mode with <Esc> (buffer-local map); close the
+window to end the monitor.
+
+================================================================================
+
+7. TROUBLESHOOTING
+
+  - :ArduinoHealth shows missing binaries, installed cores, and detected
+    project/port/fqbn. Start there.
+  - "No FQBN set": run :ArduinoBoard or add default_fqbn to sketch.yaml.
+  - ALS not attaching: confirm arduino-language-server and arduino-cli are on
+    PATH after the rebuild, the board core is installed (step 1), and an FQBN
+    is resolved. ALS logs go to its own temp dir; run with -log for details.
+  - "arduino:avr:platform not installed": run
+    `arduino-cli core update-index && arduino-cli core install arduino:avr`.
+  - Serial monitor shows garbage: fix default_baudrate in sketch.yaml to match
+    Serial.begin() in the sketch.
+
+================================================================================
+
+Out of scope: hardware debugging via probes (OpenOCD/J-Link), PlatformIO, and
+the Arduino IDE — arduino-cli covers compile/upload/monitor natively.
