@@ -4,11 +4,11 @@ local map = vim.keymap.set
 map({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 map({ "n", "x" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 
--- window navigation (Alt + arrow keys; Neovim decodes the terminal's CSI/ESC sequences itself)
-map("n", "<A-Left>", "<C-w>h", { desc = "Go to left window" })
-map("n", "<A-Down>", "<C-w>j", { desc = "Go to lower window" })
-map("n", "<A-Up>", "<C-w>k", { desc = "Go to upper window" })
-map("n", "<A-Right>", "<C-w>l", { desc = "Go to right window" })
+-- window navigation (Alt + h/j/k/l; physically Ctrl+h/j/k/l given the ctrl:swap_lalt_lctl XKB swap)
+map("n", "<A-h>", "<C-w>h", { desc = "Go to left window" })
+map("n", "<A-j>", "<C-w>j", { desc = "Go to lower window" })
+map("n", "<A-k>", "<C-w>k", { desc = "Go to upper window" })
+map("n", "<A-l>", "<C-w>l", { desc = "Go to right window" })
 
 -- window resize
 map("n", "<leader>w=", "<C-w>=", { desc = "Equalize all windows" })

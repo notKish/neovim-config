@@ -33,7 +33,7 @@ end
 
 map("n", "<A-/>", toggle_terminal, { desc = "Toggle terminal" })
 map("t", "<A-/>", toggle_terminal, { desc = "Toggle terminal" })
-map("t", "<A-Left>", "<C-\\><C-n><C-w>h", { desc = "Go to left window" })
-map("t", "<A-Down>", "<C-\\><C-n><C-w>j", { desc = "Go to lower window" })
-map("t", "<A-Up>", "<C-\\><C-n><C-w>k", { desc = "Go to upper window" })
-map("t", "<A-Right>", "<C-\\><C-n><C-w>l", { desc = "Go to right window" })
+map("t", "<A-h>", "<C-\\><C-n><C-w>h", { desc = "Go to left window" })
+map("t", "<A-j>", "<C-\\><C-n><C-w>j", { desc = "Go to lower window" })
+map("t", "<A-k>", "<C-\\><C-n><C-w>k", { desc = "Go to upper window" })
+map("t", "<A-l>", "<C-\\><C-n><C-w>l", { desc = "Go to right window" })
