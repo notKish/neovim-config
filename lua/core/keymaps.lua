@@ -4,39 +4,22 @@ local map = vim.keymap.set
 map({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 map({ "n", "x" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 
--- window navigation
-map("n", "<C-h>", "<C-w>h", { desc = "Go to left window" })
-map("n", "<C-j>", "<C-w>j", { desc = "Go to lower window" })
-map("n", "<C-k>", "<C-w>k", { desc = "Go to upper window" })
-map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
+-- window navigation (Alt + arrow keys; Neovim decodes the terminal's CSI/ESC sequences itself)
+map("n", "<A-Left>", "<C-w>h", { desc = "Go to left window" })
+map("n", "<A-Down>", "<C-w>j", { desc = "Go to lower window" })
+map("n", "<A-Up>", "<C-w>k", { desc = "Go to upper window" })
+map("n", "<A-Right>", "<C-w>l", { desc = "Go to right window" })
 
 -- window resize
 map("n", "<leader>w=", "<C-w>=", { desc = "Equalize all windows" })
 -- window splits
 map("n", "<leader>|", "<cmd>vsplit<cr>", { desc = "Vertical split" })
 map("n", "<leader>-", "<cmd>split<cr>", { desc = "Horizontal split" })
--- window resize (M-* for true meta; CSI for xterm-style Alt+arrows; M-b/M-f for Ghostty on macOS — Option+Left/Right
--- are translated to ESC+b / ESC+f word-motion, not <M-Left>, when macos-option-as-alt is on)
-local resize_maps = {
-  { "<M-Up>", "<cmd>resize +2<cr>", "Increase window height" },
-  { "<M-Down>", "<cmd>resize -2<cr>", "Decrease window height" },
-  { "<M-Left>", "<cmd>vertical resize -2<cr>", "Decrease window width" },
-  { "<M-Right>", "<cmd>vertical resize +2<cr>", "Increase window width" },
-  { "<M-b>", "<cmd>vertical resize -2<cr>", "Decrease window width" },
-  { "<M-f>", "<cmd>vertical resize +2<cr>", "Increase window width" },
-  -- Alt+arrow: CSI 1 ; 3 (xterm) or ; 9 (some terminals) — Neovim often never sees <M-Left>
-  { "\x1b[1;3A", "<cmd>resize +2<cr>", "Increase window height" },
-  { "\x1b[1;3B", "<cmd>resize -2<cr>", "Decrease window height" },
-  { "\x1b[1;3D", "<cmd>vertical resize -2<cr>", "Decrease window width" },
-  { "\x1b[1;3C", "<cmd>vertical resize +2<cr>", "Increase window width" },
-  { "\x1b[1;9A", "<cmd>resize +2<cr>", "Increase window height" },
-  { "\x1b[1;9B", "<cmd>resize -2<cr>", "Decrease window height" },
-  { "\x1b[1;9D", "<cmd>vertical resize -2<cr>", "Decrease window width" },
-  { "\x1b[1;9C", "<cmd>vertical resize +2<cr>", "Increase window width" },
-}
-for _, row in ipairs(resize_maps) do
-  map("n", row[1], row[2], { desc = row[3], silent = true })
-end
+-- window resize (Ctrl + arrow keys; Neovim decodes the terminal's CSI sequences itself)
+map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
+map("n", "<C-Down>", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
+map("n", "<C-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
+map("n", "<C-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase window width" })
 
 -- LeetCode / DSA (leetcode.nvim)
 map("n", "<leader>lq", "<cmd>Leet<cr>", { desc = "LeetCode menu (DSA practice)" })
