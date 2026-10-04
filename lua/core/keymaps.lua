@@ -10,6 +10,10 @@ map("n", "<A-j>", "<C-w>j", { desc = "Go to lower window" })
 map("n", "<A-k>", "<C-w>k", { desc = "Go to upper window" })
 map("n", "<A-l>", "<C-w>l", { desc = "Go to right window" })
 
+-- jumplist navigation (Alt + o/i; physically Ctrl+o/i given the ctrl:swap_lalt_lctl XKB swap)
+map("n", "<A-o>", "<C-o>", { desc = "Jumplist back" })
+map("n", "<A-i>", "<C-i>", { desc = "Jumplist forward" })
+
 -- window resize
 map("n", "<leader>w=", "<C-w>=", { desc = "Equalize all windows" })
 -- window splits
