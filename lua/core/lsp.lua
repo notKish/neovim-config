@@ -198,10 +198,7 @@ local function setup_arduino_for_buffer(bufnr)
   local cli = vim.fn.exepath("arduino-cli")
   local clangd = vim.fn.exepath("clangd")
   if als == "" or cli == "" or clangd == "" then
-    vim.notify(
-      "arduino toolchain missing. Run: darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro",
-      vim.log.levels.WARN
-    )
+    vim.notify("arduino toolchain missing. Run: " .. arduino.rebuild_hint(), vim.log.levels.WARN)
     return
   end
 
@@ -223,11 +220,23 @@ local function setup_arduino_for_buffer(bufnr)
     cmd[#cmd + 1] = cli_config
   end
 
+  -- clangd asks for workspace/semanticTokens/refresh once its preamble is built. ALS 0.7.7
+  -- has no handler and panics (exit 2), killing the server; upstream fix (PR #232) is unreleased.
+  -- ALS forwards the IDE's initialize params verbatim to clangd (ls.go:230), so clangd only asks
+  -- because we advertise semanticTokens. Must be vim.NIL, not nil: Neovim deep-merges these on
+  -- top of make_client_capabilities() (client.lua:425), so a nil key just lets the default back in.
+  -- Same workaround nvim-lspconfig uses. Deep copy: lsp_capabilities is shared with every server.
+  local caps = vim.tbl_deep_extend("force", {}, lsp_capabilities)
+  caps.textDocument = caps.textDocument or {}
+  caps.textDocument.semanticTokens = vim.NIL
+  caps.workspace = caps.workspace or {}
+  caps.workspace.semanticTokens = vim.NIL
+
   vim.lsp.start({
     name = "arduino_language_server",
     cmd = cmd,
     root_dir = root_dir,
-    capabilities = lsp_capabilities,
+    capabilities = caps,
   })
 end
 
@@ -336,7 +345,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
       vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
         group = document_highlight_augroup,
         buffer = buf,
-        callback = vim.lsp.buf.document_highlight,
+        -- Re-check at call time: non-LSP clients (e.g. mini.snippets) attach here too and
+        -- would otherwise make the broadcast request fail with "not supported by any server".
+        callback = function()
+          if #vim.lsp.get_clients({ bufnr = buf, method = "textDocument/documentHighlight" }) > 0 then
+            vim.lsp.buf.document_highlight({ bufnr = buf })
+          end
+        end,
       })
       vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
         group = document_highlight_augroup,
