@@ -9,11 +9,25 @@ local function cli_path()
   return vim.fn.exepath("arduino-cli")
 end
 
+-- Host-specific hints: this nvim config is shared between the macOS and NixOS machines,
+-- so the rebuild command and the serial port example must follow the running OS.
+local function is_macos()
+  return vim.uv.os_uname().sysname == "Darwin"
+end
+
+function M.rebuild_hint()
+  if is_macos() then
+    return "darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro"
+  end
+  return "nixos-rebuild switch --flake ~/.config/nix#nixos"
+end
+
+function M.port_hint()
+  return is_macos() and "/dev/cu.usbmodem14101" or "/dev/ttyACM0"
+end
+
 local function notify_missing()
-  vim.notify(
-    "arduino-cli not found. Run: darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro",
-    vim.log.levels.WARN
-  )
+  vim.notify("arduino-cli not found. Run: " .. M.rebuild_hint(), vim.log.levels.WARN)
 end
 
 -- Clang-style errorformat shared by :make (compile) and the upload quickfix.
@@ -165,7 +179,7 @@ function M.upload()
   end
   local port = M.port(root)
   if not port then
-    port = vim.fn.input("Serial port (e.g. /dev/cu.usbmodem14101): ")
+    port = vim.fn.input("Serial port (e.g. " .. M.port_hint() .. "): ")
     if port == "" then
       vim.notify("No port — connect a board or set default_port in sketch.yaml", vim.log.levels.WARN)
       return
@@ -211,7 +225,7 @@ function M.monitor()
   end
   local port = M.port(root)
   if not port then
-    port = vim.fn.input("Serial port (e.g. /dev/cu.usbmodem14101): ")
+    port = vim.fn.input("Serial port (e.g. " .. M.port_hint() .. "): ")
     if port == "" then
       return
     end
@@ -275,7 +289,7 @@ end
 function M.health()
   local cli = cli_path()
   local als = vim.fn.exepath("arduino-language-server")
-  local rebuild = "darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro"
+  local rebuild = M.rebuild_hint()
   local lines = {
     "Arduino toolchain status:",
     ("  arduino-cli: %s"):format(cli ~= "" and cli or "MISSING — run: " .. rebuild),

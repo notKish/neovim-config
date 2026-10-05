@@ -63,8 +63,14 @@ function M.jdtls_bundles()
   end, jars or {})
 end
 
+-- This nvim config is shared between the macOS and NixOS machines, so the rebuild command
+-- differs (same host detection as plugins/arduino.lua).
+local rebuild_cmd = vim.uv.os_uname().sysname == "Darwin"
+    and "darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro"
+  or "nixos-rebuild switch --flake ~/.config/nix#nixos"
+
 local function notify_missing(msg)
-  vim.notify(msg .. "\nRun: darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro", vim.log.levels.WARN)
+  vim.notify(msg .. "\nRun: " .. rebuild_cmd, vim.log.levels.WARN)
 end
 
 local project_root_markers = {

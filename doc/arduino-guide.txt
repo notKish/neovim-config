@@ -15,6 +15,9 @@ Leader key is SPACE. Compile entry point is :make; everything else uses the
 
 Install the toolchain (once, via Nix):
 
+    # NixOS
+    sudo nixos-rebuild switch --flake ~/.config/nix#nixos
+    # macOS
     sudo darwin-rebuild switch --flake ~/.config/nix#ganeshs-MacBook-Pro
 
 This provides arduino-cli and arduino-language-server on PATH. Restart Neovim
@@ -71,7 +74,7 @@ or write sketch.yaml yourself (also sets the serial port and baud rate):
 
     # sketch.yaml
     default_fqbn: arduino:avr:uno
-    default_port: /dev/cu.usbmodem14101
+    default_port: /dev/ttyACM0        # macOS: /dev/cu.usbmodem14101
     default_baudrate: 115200
 
 Without an FQBN, ALS will not start and :make compiles without board-specific
